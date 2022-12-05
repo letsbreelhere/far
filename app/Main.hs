@@ -30,11 +30,12 @@ eventHandler (VtyEvent e) = do
 eventHandler _ = undefined
 
 ui :: App AppState Event Name
-ui = (simpleApp emptyWidget)
+ui = App
   { appDraw = drawUI
   , appChooseCursor = chooseCursor
   , appAttrMap = const mapForApp
   , appHandleEvent = eventHandler
+  , appStartEvent = pure ()
   }
 
 main :: IO ()
