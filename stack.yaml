@@ -8,9 +8,9 @@
 # A snapshot resolver dictates the compiler version and the set of packages
 # to be used for project dependencies. For example:
 #
-resolver: lts-19.33
+#resolver: lts-19.33
 #resolver: nightly-2022-11-22
-#resolver: ghc-9.4.2
+resolver: ghc-9.2.4
 #
 # The location of a snapshot can be provided as a file or url. Stack assumes
 # a snapshot provided as a file might change, whereas a url resource does not.
@@ -35,7 +35,38 @@ packages:
 # These entries can reference officially published versions as well as
 # forks / in-progress versions pinned to a git hash. For example:
 #
-# extra-deps:
+extra-deps:
+  - brick-1.5@sha256:e9f1785065a92bc99cd89c4076ee740b80bb4254f6b25346dff82e0172e63644,17826
+  - microlens-0.4.13.0@sha256:40794f266977558e1138ac034701fa3ff66518bc4ca6a1fba5c575d4157cf0ba,4573
+  - microlens-th-0.4.3.10@sha256:a2126f80b68c56c2fb7561caebbe17e0a1193fafa6e1624cab9814c4b69e5c90,2357
+  - regex-pcre-0.95.0.0@sha256:323472b4a721694d3c0cc347affe7b69eec3ae2d9a782417dee2ff23aff1d81d,2461
+  - vty-5.37@sha256:416ba9007f6b64226ad68bfd7a227714082832d004e07567e9850a7cec67d77a,20859
+  - ansi-terminal-0.11.4@sha256:410737137c798e23339a08435a5511785ebf1db08700e37debbd7801cf73fc82,3584
+  - bimap-0.5.0@sha256:aba506d02a1c93fc2b50dcbe728d2a4d07cca89b7033945418061a0b08576ebd,1889
+  - blaze-builder-0.4.2.2@sha256:f0017df374c330de0ebe0eb15eae8c48427bddefa1d81a3cb31c0a4812ecdb08,3685
+  - config-ini-0.2.5.0@sha256:25b30b8fada023cb550b7aa837823459f6511ec197873cf477c9a3a479b41ab2,3327
+  - contravariant-1.5.5@sha256:470ed0e040e879e2da4af1b2c8f94e199f6135852a8107858d5ae0a95365835f,3041
+  - data-clist-0.2@sha256:b764c5a8a7bc1bc9b7bcca7f34af911757397fbd58c0d2431dcaeb2fb88ab0d5,1226
+  - hashable-1.4.1.0@sha256:50b2f002c68fe67730ee7a3cd8607486197dd99b084255005ad51ecd6970a41b,5019
+  - microlens-mtl-0.2.0.2@sha256:ab8f264c6fecd763818c2e73740487ac371a4fd92cc32031c1c9de284a10518e,1875
+  - parallel-3.2.2.0@sha256:6edd5a06938cea3d28b406d5231683f89737e854af144a8800aa69e1eee785e0,1821
+  - regex-base-0.94.0.2@sha256:4ff4425c710cddf440dfbac6cd52310bb6b23e17902390ff71c9fc7eaafc4fcc,2643
+  - text-zipper-0.12@sha256:e96110598fc25e57a99ffcd8e583351af8b325b813aa5e3bd0adc627e3e02b6b,1472
+  - th-abstraction-0.4.5.0@sha256:313f8b3c65781310df66ba86518bcf7662b1b419b601afaf72bb977c255fe6e9,2148
+  - utf8-string-1.0.2@sha256:79416292186feeaf1f60e49ac5a1ffae9bf1b120e040a74bf0e81ca7f1d31d3f,1538
+  - vector-0.13.0.0@sha256:54528e95501742b99462cc543891f21177e7db34d960ce8e3cbb25afb16a9c89,9112
+  - word-wrap-0.5@sha256:721baf1dca2e4bb4cb5a6c2b7391ee1f5a6862cdfbf286bcb6083d5ac2cf421a,1534
+  - StateVar-1.2.2@sha256:3c022c00485fe165e3080d5da6b3ca9c9b02f62c5deebc584d1b3d1309ce673e,1673
+  - colour-2.3.6@sha256:ebdcbf15023958838a527e381ab3c3b1e99ed12d1b25efeb7feaa4ad8c37664a,2378
+  - megaparsec-9.3.0@sha256:5836aed85cdc87025c2e947040331f2a3cde32911db3b841161c6f3dc4fc5f4f,3219
+  - primitive-0.7.4.0@sha256:89b88a3e08493b7727fa4089b0692bfbdf7e1e666ef54635f458644eb8358764,2857
+  - transformers-compat-0.7.2@sha256:044fb9955f63ee138fcebedfdcbe54afe741f2d5892a2d0bdf3a8052bd342643,5601
+  - unordered-containers-0.2.19.1@sha256:db11042bb0356c0adea277d0794743829125b4c99455af6af2bd5f7bd5e88a39,3797
+  - vector-stream-0.1.0.0@sha256:09b0f8dc4e51936b9d6b04791f0aa03f7c9759b5fb7140eac8a9461cda1e55a3,1404
+  - case-insensitive-1.2.1.0@sha256:9dfd3171fc7698cf8d931727d3af3a7b389135b583e46b5adac1f9d2026fff61,2244
+  - parser-combinators-1.3.0@sha256:edd54ba56cbae8fadbcceebcfef31b2c70a835e92e5eda41151b939c40647281,1570
+  - scientific-0.3.7.0@sha256:517444c944dad9db8235d7b311d7b9a0839a519ee3178288b5a9606256e0c7d8,4840
+  - integer-logarithms-1.0.3.1@sha256:d59bfd1d39808217af2b68789d3c0e57cb7199d47405a276060d88fef4f4017d,3246
 # - acme-missiles-0.3
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
