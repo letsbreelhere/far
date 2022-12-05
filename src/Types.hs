@@ -8,7 +8,7 @@ data Name = FileBrowser | Preview | Command
   deriving (Show, Ord, Eq)
 data AppState = AppState
   { _focus :: Name
-  , _files :: List Name String
+  , _files :: List Name (String, String)
   }
 makeLenses ''AppState
 

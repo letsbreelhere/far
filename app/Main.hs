@@ -10,6 +10,7 @@ import qualified Data.Foldable as L
 import qualified Brick.Widgets.List as List
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
+import Data.Maybe (catMaybes)
 
 chooseCursor :: AppState -> [CursorLocation Name] -> Maybe (CursorLocation Name)
 chooseCursor s = L.find (hasName (s^.focus))
@@ -41,6 +42,14 @@ ui = App
 main :: IO ()
 main = do
   fs <- getCurrentDirectory >>= listDirectory
-  let fList = List.list FileBrowser (Vec.fromList fs) 1
+  fsWithContents <- catMaybes <$> mapM fileWithContents fs
+  let fList = List.list FileBrowser (Vec.fromList fsWithContents) 1
   _ <- defaultMain ui (AppState FileBrowser fList)
   pure ()
+    where fileWithContents fn = do
+            isFile <- doesFileExist fn
+            if isFile
+               then do
+                      c <- readFile fn
+                      pure $ Just (fn, c)
+               else pure Nothing
