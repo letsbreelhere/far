@@ -25,10 +25,10 @@ filesPane :: RenderCtx (Widget Name)
 filesPane = do
   fc <- viewing focus
   fs <- viewing files
-  pure $ List.renderList renderFile (fc == FileBrowser) fs
+  pure $ padTop (Pad 1) $ List.renderList renderFile (fc == FileBrowser) fs
   where renderFile selected (fname, _) = withAttr (attrName $ if selected then "selected" else "default") (str fname)
 
 previewPane :: RenderCtx (Widget Name)
 previewPane = do
   selection <- viewing (files . selectionL . _Just . _2)
-  pure $ B.border $ showCursor Preview  (Location (0,0)) $ str selection
+  pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) $ str selection
