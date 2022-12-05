@@ -6,6 +6,7 @@ import Brick
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.List as List
+import Lens.Micro
 
 drawUI :: AppState -> [Widget Name]
 drawUI s = [withRenderCtx uiRoot s]
@@ -28,4 +29,6 @@ filesPane = do
   where renderFile selected (fname, _) = withAttr (attrName $ if selected then "selected" else "default") (str fname)
 
 previewPane :: RenderCtx (Widget Name)
-previewPane = pure $ B.border $ C.center $ showCursor Preview  (Location (0,0)) $ str "Preview"
+previewPane = do
+  selection <- viewing (files . selectionL . _Just . _2)
+  pure $ B.border $ showCursor Preview  (Location (0,0)) $ str selection

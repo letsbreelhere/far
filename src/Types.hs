@@ -7,6 +7,7 @@ import Brick.Widgets.List (List)
 import Control.Monad.Reader (Reader, MonadReader (ask), runReader)
 import Lens.Micro
 import Lens.Micro.Extras (view)
+import qualified Brick.Widgets.List as List
 
 data Name = FileBrowser | Preview | Command
   deriving (Show, Ord, Eq)
@@ -25,7 +26,10 @@ withRenderCtx = runReader . getRenderCtx
 getCtx :: RenderCtx AppState
 getCtx = RenderCtx ask
 
-viewing :: Lens' AppState a -> RenderCtx a
+viewing :: Getting a AppState a -> RenderCtx a
 viewing l = view l <$> getCtx
+
+selectionL :: (List.Splittable t, Traversable t, Semigroup (t e)) => SimpleGetter (List.GenericList n t e) (Maybe e)
+selectionL = to (fmap snd . List.listSelectedElement)
 
 type Event = ()
