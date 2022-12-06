@@ -33,6 +33,7 @@ dependencies:
 - text
 - vector
 - vty
+- Glob
 
 ghc-options:
 - -Wall

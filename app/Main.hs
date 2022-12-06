@@ -2,13 +2,14 @@ module Main (main) where
 
 import Types
 import Rendering
+import Gitignore
 
 import Brick
 import System.Directory
-import System.FilePath
 import Lens.Micro
 import Data.Maybe (catMaybes)
 import qualified Data.Foldable as L
+import qualified Data.List as L
 import qualified Brick.Widgets.List as List
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
@@ -16,7 +17,6 @@ import qualified Data.ByteString as BS
 import Data.Text.Encoding
 import qualified Data.Text as Text
 import Control.Monad (filterM)
-import GHC.IO (unsafeInterleaveIO)
 
 chooseCursor :: AppState -> [CursorLocation Name] -> Maybe (CursorLocation Name)
 chooseCursor s = L.find (hasName (s^.focus))
@@ -47,7 +47,7 @@ ui = App
 
 main :: IO ()
 main = do
-  fs <- filterM doesFileExist =<< getDirFiltered (const $ pure True) "."
+  fs <- fmap L.sort . filterM doesFileExist =<< getFilteredContents
   fsWithContents <- catMaybes <$> mapM withContents fs
   let fList = List.list FileBrowser (Vec.fromList fsWithContents) 1
   _ <- defaultMain ui (AppState FileBrowser fList)
@@ -57,17 +57,3 @@ main = do
             case decodeUtf8' contents of
               Right decoded -> pure $ Just (f, Text.unpack decoded)
               _ -> pure Nothing
-
-getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO [FilePath]
-getDirFiltered p fp = do
-    all' <- listDirectory fp
-    all'' <- filterM p (mkRel <$> all')
-    dirs <- filterM doesDirectoryExist all''
-    case dirs of
-        [] -> pure all''
-        ds -> do
-            next <- unsafeInterleaveIO $ foldMapA (getDirFiltered p) ds
-            pure $ all'' ++ next
-
-  where mkRel = if fp == "." then id else (fp </>)
-        foldMapA = (fmap L.fold .) . traverse
