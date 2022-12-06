@@ -16,7 +16,7 @@ uiRoot = do
   cp <- commandPane
   fp <- filesPane
   pp <- previewPane
-  pure $ C.center $ hLimit 140 $ B.border $ (fp <=> cp) <+> pp
+  pure $ padAll 5 $ C.center $ B.border $ (fp <=> cp) <+> pp
 
 commandPane :: RenderCtx (Widget Name)
 commandPane = pure $ showCursor Command (Location (0,0)) (str "Command")
@@ -31,4 +31,8 @@ filesPane = do
 previewPane :: RenderCtx (Widget Name)
 previewPane = do
   selection <- viewing (files . selectionL . _Just . _2)
-  pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) $ str selection
+  pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) $ str (massageForOutput selection)
+    where massageForOutput [] = " " -- Avoid displaying empty files with less space
+          massageForOutput s = concatMap replaceTabs s
+          replaceTabs '\t' = "    "
+          replaceTabs c = [c]
