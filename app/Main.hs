@@ -9,7 +9,6 @@ import System.Directory
 import Lens.Micro
 import Data.Maybe (catMaybes)
 import qualified Data.Foldable as L
-import qualified Data.List as L
 import qualified Brick.Widgets.List as List
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
@@ -47,7 +46,7 @@ ui = App
 
 main :: IO ()
 main = do
-  fs <- fmap L.sort . filterM doesFileExist =<< getFilteredContents
+  fs <- filterM doesFileExist =<< getFilteredContents
   fsWithContents <- catMaybes <$> mapM withContents fs
   let fList = List.list FileBrowser (Vec.fromList fsWithContents) 1
   _ <- defaultMain ui (AppState FileBrowser fList)

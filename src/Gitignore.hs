@@ -10,7 +10,7 @@ import qualified Data.Foldable as L
 import Control.Monad (filterM)
 import GHC.IO (unsafeInterleaveIO)
 import qualified System.FilePath.Glob as Glob
-import Data.List (isPrefixOf, isSuffixOf)
+import qualified Data.List as L
 
 data Pattern = Pattern
   { _pNegated :: Bool
@@ -34,14 +34,14 @@ matchPattern fname p =
 
 getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO [FilePath]
 getDirFiltered predicate path = do
-    all' <- listDirectory path
-    all'' <- filterM predicate (mkRel <$> all')
-    dirs <- filterM doesDirectoryExist all''
+    paths <- L.sort <$> listDirectory path
+    filteredPaths <- filterM predicate (mkRel <$> paths)
+    dirs <- filterM doesDirectoryExist filteredPaths
     case dirs of
-        [] -> pure all''
+        [] -> pure filteredPaths
         ds -> do
           next <- unsafeInterleaveIO $ foldMapA (getDirFiltered predicate) ds
-          pure $ all'' ++ next
+          pure $ filteredPaths ++ next
 
     where mkRel = if path == "." then id else (path </>)
           foldMapA = (fmap L.fold .) . traverse
@@ -55,13 +55,13 @@ lineToPattern patternString = do
   preWildcard <- prependWildcard postWildcard
   pure $ Pattern False (Glob.compile preWildcard)
   where prependWildcard p
-          | "**/" `isPrefixOf` p = [p]
+          | "**/" `L.isPrefixOf` p = [p]
           | otherwise = [p, "**/" <> p]
         appendWildcard p
-          | "/" `isSuffixOf` p = [init p, p <> "**/*"]
+          | "/" `L.isSuffixOf` p = [init p, p <> "**/*"]
           | otherwise = [p]
         stripLeadingDot p
-          | "./" `isPrefixOf` p = drop 2 p
+          | "./" `L.isPrefixOf` p = drop 2 p
           | otherwise = p
 
 gitIgnorePatterns :: IO [Pattern]
