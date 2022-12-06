@@ -33,3 +33,12 @@ selectionL :: (List.Splittable t, Traversable t, Semigroup (t e)) => SimpleGette
 selectionL = to (fmap snd . List.listSelectedElement)
 
 type Event = ()
+
+data Match = Match
+  { _matchIndex :: Int
+  , _matchLength :: Int
+  , _captureIndex :: Int
+  }
+makeLenses ''Match
+
+type CaptureGroup = [Match]

@@ -21,15 +21,18 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
-- vty
 - brick
+- bytestring
 - containers
+- directory
+- filepath
 - microlens
 - microlens-th
 - mtl
 - regex-pcre
-- directory
+- text
 - vector
+- vty
 
 ghc-options:
 - -Wall
@@ -66,3 +69,8 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - far
+
+default-extensions:
+  - OverloadedStrings
+  - BangPatterns
+  - ScopedTypeVariables
