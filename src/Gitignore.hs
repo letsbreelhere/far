@@ -32,16 +32,10 @@ getDirFiltered predicate path = do
     paths <- L.sort <$> listDirectory path
     filteredPaths <- filterM predicate (mkRel <$> paths)
     dirs <- filterM doesDirectoryExist filteredPaths
-    case dirs of
-        [] -> pure filteredPaths
-        ds -> do
-          next <- unsafeInterleaveIO $ foldMapM (getDirFiltered predicate) ds
-          pure $ filteredPaths ++ next
+    next <- unsafeInterleaveIO . fmap concat . mapM (getDirFiltered predicate) $ dirs
+    pure $ filteredPaths ++ next
 
     where mkRel = if path == "." then id else (path </>)
-
-foldMapM :: (Applicative m) => (a -> m [b]) -> [a] -> m [b]
-foldMapM f = fmap concat . traverse f
 
 lineToPattern :: String -> [Pattern]
 lineToPattern "" = []
