@@ -2,6 +2,7 @@ module Events (handleEvent) where
 
 import Types
 
+import LensUtil
 import Brick
 import Lens.Micro
 import qualified Brick.Widgets.List as List
@@ -10,6 +11,7 @@ import qualified Brick.Widgets.Edit as Edit
 
 handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleEvent (VtyEvent (V.EvKey V.KEsc [])) = halt
+handleEvent (VtyEvent (V.EvKey (V.KChar '\t') [])) = focus %= succ
 handleEvent e = do
   s <- get
   case s^.focus of

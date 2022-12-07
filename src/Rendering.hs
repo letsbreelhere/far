@@ -43,10 +43,16 @@ inputPane = do
 
 filesPane :: RenderCtx (Widget Name)
 filesPane = do
-  fc <- viewing focus
+  hasFocus <- (FileBrowser ==) <$> viewing focus
   fs <- viewing files
-  pure $ padTop (Pad 1) $ L.renderList renderFile (fc == FileBrowser) fs
-  where renderFile selected (fname, _) = withAttr (attrName $ if selected then "selected" else "default") (str fname)
+  pure $ padTop (Pad 1) $ L.renderList (renderFile hasFocus) hasFocus fs
+
+renderFile :: Bool -> Bool -> (String, String) -> Widget n
+renderFile hasFocus selected (fname, _) = withAttr attr (str fname)
+  where attr = attrName $ case (selected, hasFocus) of
+                 (True, True) -> "selectedFocus"
+                 (True, False) -> "selected"
+                 _ -> "default"
 
 previewPane :: RenderCtx (Widget Name)
 previewPane = do

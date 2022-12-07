@@ -27,6 +27,7 @@ mapForApp :: AttrMap
 mapForApp = attrMap V.defAttr
   [ (attrName "default", V.defAttr)
   , (attrName "selected", V.defAttr `V.withStyle` V.reverseVideo)
+  , (attrName "selectedFocus", V.defAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
   ]
 
 ui :: App AppState Event Name
