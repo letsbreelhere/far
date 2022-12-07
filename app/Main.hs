@@ -16,6 +16,7 @@ import qualified Data.ByteString as BS
 import Data.Text.Encoding
 import qualified Data.Text as Text
 import Control.Monad (filterM)
+import Events
 
 chooseCursor :: AppState -> [CursorLocation Name] -> Maybe (CursorLocation Name)
 chooseCursor s = L.find (hasName (s^.focus))
@@ -27,20 +28,12 @@ mapForApp = attrMap V.defAttr
   , (attrName "selected", V.defAttr `V.withStyle` V.reverseVideo)
   ]
 
-eventHandler :: BrickEvent Name Event -> EventM Name AppState ()
-eventHandler (VtyEvent e) = do
-  s <- get
-  case s^.focus of
-    FileBrowser -> zoom files $ List.handleListEventVi undefined e
-    _ -> pure ()
-eventHandler _ = pure ()
-
 ui :: App AppState Event Name
 ui = App
   { appDraw = drawUI
   , appChooseCursor = chooseCursor
   , appAttrMap = const mapForApp
-  , appHandleEvent = eventHandler
+  , appHandleEvent = handleEvent
   , appStartEvent = pure ()
   }
 
