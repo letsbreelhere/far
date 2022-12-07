@@ -6,7 +6,6 @@ import Lens.Micro
 import Lens.Micro.TH
 import System.Directory
 import System.FilePath
-import qualified Data.Foldable as L
 import Control.Monad (filterM)
 import GHC.IO (unsafeInterleaveIO)
 import qualified System.FilePath.Glob as Glob
@@ -40,11 +39,13 @@ getDirFiltered predicate path = do
     case dirs of
         [] -> pure filteredPaths
         ds -> do
-          next <- unsafeInterleaveIO $ foldMapA (getDirFiltered predicate) ds
+          next <- unsafeInterleaveIO $ foldMapM (getDirFiltered predicate) ds
           pure $ filteredPaths ++ next
 
     where mkRel = if path == "." then id else (path </>)
-          foldMapA = (fmap L.fold .) . traverse
+
+foldMapM :: (Applicative m) => (a -> m [b]) -> [a] -> m [b]
+foldMapM f = fmap concat . traverse f
 
 lineToPattern :: String -> [Pattern]
 lineToPattern "" = []
