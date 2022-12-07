@@ -2,3 +2,4 @@
 .stack-work/
 *~
 *.cabal
+stack.yaml.lock
