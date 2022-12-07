@@ -1,31 +1,51 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes #-}
+
 module Rendering (drawUI) where
 
 import Types
 
 import Brick
+import Control.Monad.Reader (Reader, MonadReader (ask), runReader)
+import Lens.Micro
+import Lens.Micro.Extras (view)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
-import qualified Brick.Widgets.List as List
-import Lens.Micro
+import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.Edit as E
+
+newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
+  deriving (Functor, Applicative, Monad, MonadReader AppState)
+
+withRenderCtx :: RenderCtx a -> AppState -> a
+withRenderCtx = runReader . getRenderCtx
+
+getCtx :: RenderCtx AppState
+getCtx = RenderCtx ask
+
+viewing :: Getting a AppState a -> RenderCtx a
+viewing l = view l <$> getCtx
 
 drawUI :: AppState -> [Widget Name]
 drawUI s = [withRenderCtx uiRoot s]
 
 uiRoot :: RenderCtx (Widget Name)
 uiRoot = do
-  cp <- commandPane
+  ip <- inputPane
   fp <- filesPane
   pp <- previewPane
-  pure $ padAll 5 $ C.center $ B.border $ (fp <=> cp) <+> pp
+  pure $ padAll 5 $ C.center $ B.border $ (fp <=> ip) <+> pp
 
-commandPane :: RenderCtx (Widget Name)
-commandPane = pure $ showCursor Command (Location (0,0)) (str "Command")
+inputPane :: RenderCtx (Widget Name)
+inputPane = do
+  hasFocus <- (Input ==) <$> viewing focus
+  editor <- viewing regex
+  pure $ E.renderEditor (vBox . map str) hasFocus editor
 
 filesPane :: RenderCtx (Widget Name)
 filesPane = do
   fc <- viewing focus
   fs <- viewing files
-  pure $ padTop (Pad 1) $ List.renderList renderFile (fc == FileBrowser) fs
+  pure $ padTop (Pad 1) $ L.renderList renderFile (fc == FileBrowser) fs
   where renderFile selected (fname, _) = withAttr (attrName $ if selected then "selected" else "default") (str fname)
 
 previewPane :: RenderCtx (Widget Name)

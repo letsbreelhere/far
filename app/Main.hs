@@ -10,6 +10,7 @@ import Lens.Micro
 import Data.Maybe (catMaybes)
 import qualified Data.Foldable as L
 import qualified Brick.Widgets.List as List
+import qualified Brick.Widgets.Edit as Edit
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Data.ByteString as BS
@@ -42,7 +43,8 @@ main = do
   fs <- filterM doesFileExist =<< getFilteredContents
   fsWithContents <- catMaybes <$> mapM withContents fs
   let fList = List.list FileBrowser (Vec.fromList fsWithContents) 1
-  _ <- defaultMain ui (AppState FileBrowser fList)
+      editor = Edit.editor Input (Just 1) ""
+  _ <- defaultMain ui (AppState Input fList editor)
   pure ()
     where withContents f = do
             contents <- BS.readFile f
