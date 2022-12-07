@@ -1,9 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
 
 module Gitignore (getFilteredContents) where
 
-import Lens.Micro
-import Lens.Micro.TH
 import System.Directory
 import System.FilePath
 import Control.Monad (filterM)
@@ -12,11 +9,10 @@ import qualified System.FilePath.Glob as Glob
 import qualified Data.List as L
 
 data Pattern = Pattern
-  { _pNegated :: Bool
-  , _globPattern :: Glob.Pattern
+  { pNegated :: Bool
+  , globPattern :: Glob.Pattern
   }
   deriving (Show)
-makeLenses ''Pattern
 
 getFilteredContents :: IO [FilePath]
 getFilteredContents = do
@@ -27,9 +23,9 @@ filterPath :: Foldable t => t Pattern -> FilePath -> Bool
 filterPath ps fname = not . any (matchPattern fname) $ ps
 
 matchPattern :: FilePath -> Pattern -> Bool
-matchPattern fname p =
-  let match = Glob.match (p^.globPattern) fname
-   in if p^.pNegated then not match else match
+matchPattern fname (Pattern negated glob) =
+  let match = Glob.match glob fname
+   in if negated then not match else match
 
 getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO [FilePath]
 getDirFiltered predicate path = do
@@ -50,7 +46,7 @@ foldMapM f = fmap concat . traverse f
 lineToPattern :: String -> [Pattern]
 lineToPattern "" = []
 lineToPattern ('#':_) = []
-lineToPattern ('!':p) = map (pNegated .~ True) (lineToPattern p)
+lineToPattern ('!':p) = map (\p' -> p' { pNegated=True }) (lineToPattern p)
 lineToPattern patternString = do
   postWildcard <- appendWildcard (stripLeadingDot patternString)
   preWildcard <- prependWildcard postWildcard
