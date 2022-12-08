@@ -1,4 +1,4 @@
-module Search (mkRegex, findMatches, textWithContents, pairWithContent) where
+module Search (mkRegex, findMatches, textWithMatches) where
 
 import Types
 
@@ -21,8 +21,8 @@ toCaptureGroup ma = mapMaybe toMatch (toList ma `zip` [0..])
   where toMatch ((i, _), _) | i < 0 = Nothing
         toMatch ((i, l), c) = Just $ Match { _matchIndex=i, _matchLength=l, _captureIndex=c}
 
-textWithContents :: Regex -> String -> [TextWithMatch]
-textWithContents r s =
+textWithMatches :: Regex -> String -> [TextWithMatch]
+textWithMatches r s =
   let cgs = findMatches r s
    in if null cgs
         then [TextWithMatch s Nothing]

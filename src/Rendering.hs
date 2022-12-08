@@ -12,7 +12,7 @@ import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.Edit as E
-import Search (findMatches, mkRegex)
+import Search (textWithMatches, mkRegex)
 
 newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
   deriving (Functor, Applicative, Monad, MonadReader AppState)
@@ -67,9 +67,9 @@ previewPane = do
   grepRegex <- viewing (regexFrom . editorContentL)
   let mRegex = mkRegex grepRegex
   selection <- case mRegex of
-                 Just r -> show . findMatches r <$> viewing (files . selectionL . _Just . _2)
-                 Nothing -> viewing (files . selectionL . _Just . _2)
-  pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) $ str (massageForOutput selection)
+                 Just r -> vBox . concatMap (map (str . massageForOutput) . lines . _content) . textWithMatches r <$> viewing (files . selectionL . _Just . _2)
+                 Nothing -> str . massageForOutput <$> viewing (files . selectionL . _Just . _2)
+  pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) selection
     where massageForOutput [] = " " -- Avoid displaying empty files with less space
           massageForOutput s = concatMap replaceTabs s
           replaceTabs '\t' = "    "

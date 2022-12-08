@@ -1,4 +1,3 @@
-
 module Gitignore (getFilteredContents) where
 
 import System.Directory
