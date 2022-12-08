@@ -28,6 +28,7 @@ mapForApp = attrMap V.defAttr
   [ (attrName "default", V.defAttr)
   , (attrName "selected", V.defAttr `V.withStyle` V.reverseVideo)
   , (attrName "selectedFocus", V.defAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
+  , (attrName "input", V.defAttr `V.withForeColor` V.blue)
   ]
 
 ui :: App AppState Event Name
@@ -44,8 +45,9 @@ main = do
   fs <- filterM doesFileExist =<< getFilteredContents
   fsWithContents <- catMaybes <$> mapM withContents fs
   let fList = List.list FileBrowser (Vec.fromList fsWithContents) 1
-      editor = Edit.editor Input (Just 1) ""
-  _ <- defaultMain ui (AppState Input fList editor)
+      editorFrom = Edit.editor FromInput (Just 1) ""
+      editorTo = Edit.editor ToInput (Just 1) ""
+  _ <- defaultMain ui (AppState FromInput fList editorFrom editorTo)
   pure ()
     where withContents f = do
             contents <- BS.readFile f

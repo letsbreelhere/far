@@ -16,6 +16,9 @@ import qualified Brick.Widgets.Edit as E
 newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
   deriving (Functor, Applicative, Monad, MonadReader AppState)
 
+focusIs :: Name -> RenderCtx Bool
+focusIs n = (n == ) <$> viewing focus
+
 withRenderCtx :: RenderCtx a -> AppState -> a
 withRenderCtx = runReader . getRenderCtx
 
@@ -37,9 +40,13 @@ uiRoot = do
 
 inputPane :: RenderCtx (Widget Name)
 inputPane = do
-  hasFocus <- (Input ==) <$> viewing focus
-  editor <- viewing regex
-  pure $ E.renderEditor (vBox . map str) hasFocus editor
+  fromFocus <- focusIs FromInput
+  let showEditor = withAttr (attrName "input") . vBox . map str
+  f <- E.renderEditor showEditor fromFocus <$> viewing regexFrom
+
+  toFocus <- focusIs ToInput
+  t <- E.renderEditor showEditor toFocus <$> viewing regexTo
+  pure $ f <+> str "/ " <+> t
 
 filesPane :: RenderCtx (Widget Name)
 filesPane = do

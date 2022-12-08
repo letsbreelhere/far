@@ -11,7 +11,8 @@ import qualified Brick.Widgets.Edit as Edit
 
 handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleEvent (VtyEvent (V.EvKey V.KEsc [])) = halt
-handleEvent (VtyEvent (V.EvKey (V.KChar '\t') [])) = focus %= succ
+handleEvent (VtyEvent (V.EvKey (V.KChar '\t') [])) = focus %= nextName
+handleEvent (VtyEvent (V.EvKey V.KBackTab [])) = focus %= prevName
 handleEvent e = do
   s <- get
   case s^.focus of
@@ -19,7 +20,8 @@ handleEvent e = do
       case e of
         VtyEvent vtyEvent -> fileBrowserEventHandler vtyEvent
         _ -> pure ()
-    Input -> zoom regex $ Edit.handleEditorEvent e
+    FromInput -> zoom regexFrom $ Edit.handleEditorEvent e
+    ToInput -> zoom regexTo $ Edit.handleEditorEvent e
     _ -> pure ()
 
 fileBrowserEventHandler :: V.Event -> EventM Name AppState ()

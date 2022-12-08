@@ -8,24 +8,24 @@ import Brick.Widgets.Edit (Editor)
 import Lens.Micro
 import qualified Brick.Widgets.List as List
 
-data Name = FileBrowser | Preview | Input
-  deriving (Show, Ord, Eq)
+data Name = FileBrowser | Preview | FromInput | ToInput
+  deriving (Show, Ord, Eq, Enum, Bounded)
 
-instance Enum Name where
-  toEnum i = case i `mod` 3 of
-               0 -> FileBrowser
-               1 -> Preview
-               2 -> Input
-               _ -> error "What"
-  fromEnum n = case n of
-                 FileBrowser -> 0
-                 Preview -> 1
-                 Input -> 2
+nextName :: Name -> Name
+nextName n
+  | n < maxBound = toEnum . succ . fromEnum $ n
+  | otherwise = minBound
+
+prevName :: Name -> Name
+prevName n
+  | n > minBound = toEnum . pred . fromEnum $ n
+  | otherwise = maxBound
 
 data AppState = AppState
   { _focus :: Name
   , _files :: List Name (String, String)
-  , _regex :: Editor String Name
+  , _regexFrom :: Editor String Name
+  , _regexTo :: Editor String Name
   }
 makeLenses ''AppState
 
