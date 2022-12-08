@@ -72,9 +72,14 @@ previewPane = do
                  Nothing -> str . massageForWidget <$> viewing (files . selectionL . _Just . _2)
   pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) selection
 
+
 breakLines :: [TextWithMatch] -> [[TextWithMatch]]
-breakLines = go []
+breakLines = map removeLeadingEmpties . go []
   where
+    removeLeadingEmpties :: [TextWithMatch] -> [TextWithMatch]
+    removeLeadingEmpties (twm:rest@(_:_))
+      | null (twm ^. content) = rest
+    removeLeadingEmpties twms = twms
     go curLine [] = [curLine]
     go curLine (s:ss) =
        case firstBreak (s^.content) of
@@ -90,7 +95,7 @@ previewHighlightedContent twms =
       previewAttr twm = case twm^.mayIndex of
                           Just _ -> attrName "previewHighlight"
                           Nothing -> attrName "previewNormal"
-   in vBox $ map (\line -> hBox $ map (\twm -> withAttr (previewAttr twm) . str . _content $ twm) line) broken
+   in vBox $ map (\line -> hBox $ map (\twm -> withAttr (previewAttr twm) . str . massageForWidget . _content $ twm) line) broken
   --let curMatch = vBox . map (str . massageForWidget) . lines . _content $ twm
    --in if last (_content twm) == '\n'
          --then curMatch <=> previewHighlightedContent twms
