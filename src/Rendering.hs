@@ -85,12 +85,16 @@ breakLines = go []
       pure (take i s, drop (i+1) s)
 
 previewHighlightedContent :: [TextWithMatch] -> Widget Name
-previewHighlightedContent [] = emptyWidget
-previewHighlightedContent (twm:twms) =
-  let curMatch = vBox . map (str . massageForWidget) . lines . _content $ twm
-   in if last (_content twm) == '\n'
-         then curMatch <=> previewHighlightedContent twms
-         else curMatch <+> previewHighlightedContent twms
+previewHighlightedContent twms =
+  let broken = breakLines twms
+      previewAttr twm = case twm^.mayIndex of
+                          Just _ -> attrName "previewHighlight"
+                          Nothing -> attrName "previewNormal"
+   in vBox $ map (\line -> hBox $ map (\twm -> withAttr (previewAttr twm) . str . _content $ twm) line) broken
+  --let curMatch = vBox . map (str . massageForWidget) . lines . _content $ twm
+   --in if last (_content twm) == '\n'
+         --then curMatch <=> previewHighlightedContent twms
+         --else curMatch <+> previewHighlightedContent twms
 
 massageForWidget :: String -> String
 massageForWidget [] = " " -- Avoid displaying empty files with less space
