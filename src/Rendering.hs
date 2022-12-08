@@ -1,6 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes #-}
 
-module Rendering (drawUI) where
+module Rendering (module Rendering) where
 
 import Types
 
@@ -13,6 +13,7 @@ import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.Edit as E
 import Search (textWithMatches, mkRegex)
+import Data.List (elemIndex)
 
 newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
   deriving (Functor, Applicative, Monad, MonadReader AppState)
@@ -67,10 +68,34 @@ previewPane = do
   grepRegex <- viewing (regexFrom . editorContentL)
   let mRegex = mkRegex grepRegex
   selection <- case mRegex of
-                 Just r -> vBox . concatMap (map (str . massageForOutput) . lines . _content) . textWithMatches r <$> viewing (files . selectionL . _Just . _2)
-                 Nothing -> str . massageForOutput <$> viewing (files . selectionL . _Just . _2)
+                 Just r -> previewHighlightedContent . textWithMatches r <$> viewing (files . selectionL . _Just . _2)
+                 Nothing -> str . massageForWidget <$> viewing (files . selectionL . _Just . _2)
   pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) selection
-    where massageForOutput [] = " " -- Avoid displaying empty files with less space
-          massageForOutput s = concatMap replaceTabs s
-          replaceTabs '\t' = "    "
-          replaceTabs c = [c]
+
+breakLines :: [TextWithMatch] -> [[TextWithMatch]]
+breakLines = go []
+  where
+    go curLine [] = [curLine]
+    go curLine (s:ss) =
+       case firstBreak (s^.content) of
+         Just (lh, lt) -> (curLine ++ [s & content .~ lh]) : go [] ((s & content .~ lt):ss)
+         Nothing -> go (curLine ++ [s]) ss
+    firstBreak s = do
+      i <-'\n' `elemIndex` s
+      pure (take i s, drop (i+1) s)
+
+previewHighlightedContent :: [TextWithMatch] -> Widget Name
+previewHighlightedContent [] = emptyWidget
+previewHighlightedContent (twm:twms) =
+  let curMatch = vBox . map (str . massageForWidget) . lines . _content $ twm
+   in if last (_content twm) == '\n'
+         then curMatch <=> previewHighlightedContent twms
+         else curMatch <+> previewHighlightedContent twms
+
+massageForWidget :: String -> String
+massageForWidget [] = " " -- Avoid displaying empty files with less space
+massageForWidget s = concatMap replaceTabs s
+
+replaceTabs :: Char -> String
+replaceTabs '\t' = "    "
+replaceTabs c = [c]
