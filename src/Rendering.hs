@@ -57,11 +57,11 @@ filesPane = do
   pure $ padTop (Pad 1) $ L.renderList (renderFile hasFocus) hasFocus fs
 
 renderFile :: Bool -> Bool -> (String, String) -> Widget n
-renderFile hasFocus selected (fname, _) = withAttr attr (str fname)
-  where attr = attrName $ case (selected, hasFocus) of
-                 (True, True) -> "selectedFocus"
-                 (True, False) -> "selected"
-                 _ -> "default"
+renderFile hasFocus selected (fname, _) = attr (str fname)
+  where attr = withAttr $ case (selected, hasFocus) of
+                 (True, True) -> attrName "highlightSelection"
+                 (True, False) -> attrName "highlight"
+                 _ -> mempty
 
 previewPane :: RenderCtx (Widget Name)
 previewPane = do
@@ -89,13 +89,17 @@ breakLines = map removeLeadingEmpties . go []
       i <-'\n' `elemIndex` s
       pure (take i s, drop (i+1) s)
 
+withAttrs :: [String] -> Widget n -> Widget n
+withAttrs = withAttr . foldMap attrName
+
 previewHighlightedContent :: [TextWithMatch] -> Widget Name
 previewHighlightedContent twms =
   let broken = breakLines twms
       previewAttr twm = case twm^.mayIndex of
-                          Just _ -> attrName "previewHighlight"
-                          Nothing -> attrName "previewNormal"
-   in vBox $ map (\line -> hBox $ map (\twm -> withAttr (previewAttr twm) . str . massageForWidget . _content $ twm) line) broken
+                          Just _ -> ["highlightSelection"]
+                          Nothing -> []
+      renderLine = hBox . map (\twm -> withAttrs (previewAttr twm) . str . massageForWidget . _content $ twm)
+   in vBox $ map renderLine broken
   --let curMatch = vBox . map (str . massageForWidget) . lines . _content $ twm
    --in if last (_content twm) == '\n'
          --then curMatch <=> previewHighlightedContent twms

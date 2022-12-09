@@ -25,12 +25,10 @@ chooseCursor s = L.find (hasName (s^.focus))
 
 mapForApp :: AttrMap
 mapForApp = attrMap V.defAttr
-  [ (attrName "default", V.defAttr)
-  , (attrName "selected", V.defAttr `V.withStyle` V.reverseVideo)
-  , (attrName "selectedFocus", V.defAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
-  , (attrName "input", V.defAttr `V.withForeColor` V.blue)
-  , (attrName "previewNormal", V.defAttr)
-  , (attrName "previewHighlight", V.defAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
+  [ (attrName "input", V.currentAttr `V.withForeColor` V.blue)
+  , (attrName "selection", V.currentAttr `V.withForeColor` V.blue)
+  , (attrName "highlight", V.currentAttr `V.withStyle` V.reverseVideo)
+  , (attrName "highlightSelection", V.currentAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
   ]
 
 ui :: App AppState Event Name
