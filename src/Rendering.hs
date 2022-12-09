@@ -100,10 +100,6 @@ previewHighlightedContent twms =
                           Nothing -> []
       renderLine = hBox . map (\twm -> withAttrs (previewAttr twm) . str . massageForWidget . _content $ twm)
    in vBox $ map renderLine broken
-  --let curMatch = vBox . map (str . massageForWidget) . lines . _content $ twm
-   --in if last (_content twm) == '\n'
-         --then curMatch <=> previewHighlightedContent twms
-         --else curMatch <+> previewHighlightedContent twms
 
 massageForWidget :: String -> String
 massageForWidget [] = " " -- Avoid displaying empty files with less space
