@@ -19,7 +19,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Data.Foldable (Foldable(toList))
 import qualified Data.Sequence as Seq
-import Data.Text.Encoding (decodeUtf8)
+import Data.Text.Encoding (decodeUtf8, decodeUtf8')
 
 newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
   deriving (Functor, Applicative, Monad, MonadReader AppState)
@@ -85,8 +85,19 @@ previewHighlightedContent twms =
       previewAttr twm = case twm^.mayIndex of
                           Just _ -> attrName "highlightSelection"
                           Nothing -> mempty
-      renderLine = hBox . map (\twm -> withAttr (previewAttr twm) . str . massageForWidget . Text.unpack . decodeUtf8 . _content $ twm)
-   in vBox $ fmap renderLine (map toList $ toList broken)
+      attemptDecode :: TextWithMatch -> Maybe String
+      attemptDecode twm = case decodeUtf8' . view content $ twm of
+                            Left _ -> Nothing
+                            Right c -> Just (Text.unpack c)
+      renderTwm :: TextWithMatch -> Maybe (Widget Name)
+      renderTwm twm = do
+        decoded <- attemptDecode twm
+        pure . withAttr (previewAttr twm) . str . massageForWidget $ decoded
+      renderLine :: [TextWithMatch] -> Maybe (Widget Name)
+      renderLine = fmap hBox . mapM renderTwm
+   in case mapM (renderLine . toList) (toList broken) of
+        Just ls -> vBox ls
+        Nothing -> withAttr (attrName "error") $ str "[This file contains invalid characters and will not be displayed.]"
 
 
 breakLines :: Seq TextWithMatch -> Seq (Seq TextWithMatch)
