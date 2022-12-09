@@ -2,18 +2,21 @@
 
 module Rendering (module Rendering) where
 
+import Search (textWithMatches, mkRegex)
 import Types
 
 import Brick
 import Control.Monad.Reader (Reader, MonadReader (ask), runReader)
+import Data.List (elemIndex)
+import Data.Sequence (Seq(..), (<|), (|>))
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
-import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.Edit as E
-import Search (textWithMatches, mkRegex)
-import Data.List (elemIndex)
+import qualified Brick.Widgets.List as L
+import Data.Foldable (Foldable(toList))
+import qualified Data.Sequence as Seq
 
 newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
   deriving (Functor, Applicative, Monad, MonadReader AppState)
@@ -68,41 +71,38 @@ previewPane = do
   grepRegex <- viewing (regexFrom . editorContentL)
   let mRegex = mkRegex grepRegex
   selection <- case mRegex of
-                 Just r -> previewHighlightedContent . textWithMatches r <$> viewing (files . selectionL . _Just . _2)
+                 Just r -> previewHighlightedContent . Seq.fromList . textWithMatches r <$> viewing (files . selectionL . _Just . _2)
                  Nothing -> str . massageForWidget <$> viewing (files . selectionL . _Just . _2)
   pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) selection
 
+previewHighlightedContent :: Seq TextWithMatch -> Widget Name
+previewHighlightedContent twms =
+  let broken = breakLines twms
+      previewAttr twm = case twm^.mayIndex of
+                          Just _ -> attrName "highlightSelection"
+                          Nothing -> mempty
+      renderLine = hBox . map (\twm -> withAttr (previewAttr twm) . str . massageForWidget . _content $ twm)
+   in vBox $ fmap renderLine (map toList $ toList broken)
 
-breakLines :: [TextWithMatch] -> [[TextWithMatch]]
-breakLines = map removeLeadingEmpties . go []
+
+breakLines :: Seq TextWithMatch -> Seq (Seq TextWithMatch)
+breakLines = fmap removeLeadingEmpties . go Seq.empty
   where
-    removeLeadingEmpties :: [TextWithMatch] -> [TextWithMatch]
-    removeLeadingEmpties (twm:rest@(_:_))
+    removeLeadingEmpties (twm :<| rest@(_:<|_))
       | null (twm ^. content) = rest
     removeLeadingEmpties twms = twms
-    go curLine [] = [curLine]
-    go curLine (s:ss) =
+    go :: Seq TextWithMatch -> Seq TextWithMatch -> Seq (Seq TextWithMatch)
+    go curLine Seq.Empty = Seq.singleton curLine
+    go curLine (s:<|ss) =
        case firstBreak (s^.content) of
-         Just (lh, lt) -> (curLine ++ [s & content .~ lh]) : go [] ((s & content .~ lt):ss)
-         Nothing -> go (curLine ++ [s]) ss
+         Just (lh, lt) -> (curLine |> (s & content .~ lh)) <| go Seq.empty ((s & content .~ lt) <| ss)
+         Nothing -> go (curLine :|> s) ss
     firstBreak s = do
       i <-'\n' `elemIndex` s
       pure (take i s, drop (i+1) s)
 
-withAttrs :: [String] -> Widget n -> Widget n
-withAttrs = withAttr . foldMap attrName
-
-previewHighlightedContent :: [TextWithMatch] -> Widget Name
-previewHighlightedContent twms =
-  let broken = breakLines twms
-      previewAttr twm = case twm^.mayIndex of
-                          Just _ -> ["highlightSelection"]
-                          Nothing -> []
-      renderLine = hBox . map (\twm -> withAttrs (previewAttr twm) . str . massageForWidget . _content $ twm)
-   in vBox $ map renderLine broken
-
 massageForWidget :: String -> String
-massageForWidget [] = " " -- Avoid displaying empty files with less space
+massageForWidget [] = " " -- Avoid displaying empty files/lines with less space
 massageForWidget s = concatMap replaceTabs s
 
 replaceTabs :: Char -> String
