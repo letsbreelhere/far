@@ -71,7 +71,7 @@ previewPane = do
   grepRegex <- viewing (regexFrom . editorContentL)
   let mRegex = mkRegex grepRegex
   selection <- case mRegex of
-                 Just r -> previewHighlightedContent . Seq.fromList . textWithMatches r <$> viewing (files . selectionL . _Just . _2)
+                 Just r -> previewHighlightedContent . textWithMatches r <$> viewing (files . selectionL . _Just . _2)
                  Nothing -> str . massageForWidget <$> viewing (files . selectionL . _Just . _2)
   pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) selection
 
