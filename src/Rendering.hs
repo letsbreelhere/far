@@ -76,6 +76,7 @@ previewPane = do
   pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) selection
 
 previewHighlightedContent :: Seq TextWithMatch -> Widget Name
+previewHighlightedContent Seq.Empty = str " "
 previewHighlightedContent twms =
   let broken = breakLines twms
       previewAttr twm = case twm^.mayIndex of
