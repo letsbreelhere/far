@@ -15,6 +15,8 @@ import qualified Graphics.Vty as V
 import qualified Data.ByteString as BS
 import Control.Monad (filterM)
 import Events
+import Data.Text.Encoding (decodeUtf8')
+import Data.Maybe (catMaybes)
 
 chooseCursor :: AppState -> [CursorLocation Name] -> Maybe (CursorLocation Name)
 chooseCursor s = L.find (hasName (s^.focus))
@@ -40,9 +42,14 @@ ui = App
 main :: IO ()
 main = do
   fs <- filterM doesFileExist =<< getFilteredContents
-  fsWithContents <- mapM (\f -> fmap (f ,) (BS.readFile f)) fs
+  fsWithContents <- catMaybes <$> mapM readAndRejectNonUnicode fs
   let fList = List.list FileBrowser (Vec.fromList fsWithContents) 1
       editorFrom = Edit.editor FromInput (Just 1) ""
       editorTo = Edit.editor ToInput (Just 1) ""
   _ <- defaultMain ui (AppState FromInput fList editorFrom editorTo)
   pure ()
+    where readAndRejectNonUnicode f = do
+            c <- BS.readFile f
+            case decodeUtf8' c of
+              Right _ -> pure $ Just (f, c)
+              Left _ -> pure Nothing

@@ -19,6 +19,7 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import Data.Foldable (Foldable(toList))
 import qualified Data.Sequence as Seq
+import Data.Text.Encoding (decodeUtf8)
 
 newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
   deriving (Functor, Applicative, Monad, MonadReader AppState)
@@ -74,7 +75,7 @@ previewPane = do
   let mRegex = mkRegex $ Text.unpack grepRegex
   selection <- case mRegex of
                  Just r -> previewHighlightedContent . textWithMatches r <$> viewing (files . selectionL . _Just . _2)
-                 Nothing -> str . massageForWidget . BS.unpack <$> viewing (files . selectionL . _Just . _2)
+                 Nothing -> str . massageForWidget . Text.unpack . decodeUtf8 <$> viewing (files . selectionL . _Just . _2)
   pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) selection
 
 previewHighlightedContent :: Seq TextWithMatch -> Widget Name
@@ -84,7 +85,7 @@ previewHighlightedContent twms =
       previewAttr twm = case twm^.mayIndex of
                           Just _ -> attrName "highlightSelection"
                           Nothing -> mempty
-      renderLine = hBox . map (\twm -> withAttr (previewAttr twm) . str . massageForWidget . BS.unpack . _content $ twm)
+      renderLine = hBox . map (\twm -> withAttr (previewAttr twm) . str . massageForWidget . Text.unpack . decodeUtf8 . _content $ twm)
    in vBox $ fmap renderLine (map toList $ toList broken)
 
 
