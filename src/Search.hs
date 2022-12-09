@@ -11,11 +11,13 @@ import Data.List (foldl')
 import Lens.Micro.Extras (view)
 import Data.Sequence (Seq(..), (|>))
 import qualified Data.Sequence as Seq
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as ByteString
 
 mkRegex :: String -> Maybe Regex
 mkRegex = Regex.makeRegexM
 
-findMatches :: Regex -> String -> [CaptureGroup]
+findMatches :: Regex -> ByteString -> [CaptureGroup]
 findMatches r s = map toCaptureGroup (Regex.matchAll r s)
 
 toCaptureGroup :: Regex.MatchArray -> CaptureGroup
@@ -23,7 +25,7 @@ toCaptureGroup ma = mapMaybe toMatch (toList ma `zip` [0..])
   where toMatch ((i, _), _) | i < 0 = Nothing
         toMatch ((i, l), c) = Just $ Match { _matchIndex=i, _matchLength=l, _captureIndex=c}
 
-textWithMatches :: Regex -> String -> Seq TextWithMatch
+textWithMatches :: Regex -> ByteString -> Seq TextWithMatch
 textWithMatches r s =
   let cgs = findMatches r s
    in if null cgs
@@ -31,14 +33,17 @@ textWithMatches r s =
         else
           let withoutSuffix = snd $ foldl' (pairWithContent s) (0, Seq.empty) cgs
               lastMatchEnds = matchEnds (head $ last cgs)
-              suffix = slice (lastMatchEnds, length s - lastMatchEnds) s
+              suffix = slice (lastMatchEnds, ByteString.length s - lastMatchEnds) s
               suffixWithMatch = TextWithMatch suffix Nothing
-           in Seq.filter (not . null . view content) (withoutSuffix |> suffixWithMatch)
+           in Seq.filter (not . ByteString.null . view content) (withoutSuffix |> suffixWithMatch)
 
-slice :: (Int, Int) -> [a] -> [a]
-slice (i, len) = take len . drop i
+slice :: (Int, Int) -> ByteString -> ByteString
+slice (i, len) = ByteString.take len . ByteString.drop i
 
-pairWithContent :: String -> (Int, Seq TextWithMatch) -> CaptureGroup -> (Int, Seq TextWithMatch)
+matchEnds :: Match -> Int
+matchEnds m = (m^.matchIndex) + (m^.matchLength)
+
+pairWithContent :: ByteString -> (Int, Seq TextWithMatch) -> CaptureGroup -> (Int, Seq TextWithMatch)
 pairWithContent s (i, acc) (m:_) = (m^.matchIndex+m^.matchLength, acc |> nextNonMatch |> nextMatch)
   where nextNonMatch = TextWithMatch (slice (i, (m^.matchIndex) - i) s) Nothing
         nextMatch = TextWithMatch (slice (m^.matchIndex, m^.matchLength) s) (Just $ m^.captureIndex)

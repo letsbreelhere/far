@@ -76,3 +76,4 @@ default-extensions:
   - OverloadedStrings
   - BangPatterns
   - ScopedTypeVariables
+  - TupleSections

@@ -7,15 +7,12 @@ import Gitignore
 import Brick
 import System.Directory
 import Lens.Micro
-import Data.Maybe (catMaybes)
 import qualified Data.Foldable as L
 import qualified Brick.Widgets.List as List
 import qualified Brick.Widgets.Edit as Edit
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Data.ByteString as BS
-import Data.Text.Encoding
-import qualified Data.Text as Text
 import Control.Monad (filterM)
 import Events
 
@@ -43,14 +40,9 @@ ui = App
 main :: IO ()
 main = do
   fs <- filterM doesFileExist =<< getFilteredContents
-  fsWithContents <- catMaybes <$> mapM withContents fs
+  fsWithContents <- mapM (\f -> fmap (f ,) (BS.readFile f)) fs
   let fList = List.list FileBrowser (Vec.fromList fsWithContents) 1
       editorFrom = Edit.editor FromInput (Just 1) ""
       editorTo = Edit.editor ToInput (Just 1) ""
   _ <- defaultMain ui (AppState FromInput fList editorFrom editorTo)
   pure ()
-    where withContents f = do
-            contents <- BS.readFile f
-            case decodeUtf8' contents of
-              Right decoded -> pure $ Just (f, Text.unpack decoded)
-              _ -> pure Nothing

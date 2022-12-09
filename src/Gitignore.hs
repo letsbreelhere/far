@@ -48,7 +48,7 @@ lineToPattern patternString = do
           | "**/" `L.isPrefixOf` p = [p]
           | otherwise = [p, "**/" <> p]
         appendWildcard p
-          | "/" `L.isSuffixOf` p = [init p, p <> "**/*"]
+          | "/" `L.isSuffixOf` p = [p <> "**"]
           | otherwise = [p]
         stripLeadingDot p
           | "./" `L.isPrefixOf` p = drop 2 p
