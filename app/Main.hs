@@ -51,8 +51,9 @@ main = do
                _ -> "."
   fs <- fmap Seq.sort . filterMSeq doesFileExist =<< getFilteredContents path
   chan <- newBChan 10
-  let process fs = do
-        writeBChan chan . FilesProcessed =<< mapM (\f -> fmap (f,) (BS.readFile f)) fs
+  let process fss = do
+        readChunks <- mapM (\f -> fmap (f,) (BS.readFile f)) fss
+        writeBChan chan . FilesProcessed $ readChunks
   _ <- forkIO $ do
     mapM_ process (Seq.chunksOf 10 fs)
   let fList = List.list FileBrowser Vec.empty 1

@@ -73,10 +73,18 @@ previewPane :: RenderCtx (Widget Name)
 previewPane = do
   grepRegex <- viewing (regexFrom . editorContentL)
   let mRegex = mkRegex $ Text.unpack grepRegex
-  selection <- case mRegex of
-                 Just r -> previewHighlightedContent . textWithMatches r <$> viewing (files . selectionL . _Just . _2)
-                 Nothing -> str . massageForWidget . Text.unpack . decodeUtf8 <$> viewing (files . selectionL . _Just . _2)
-  pure $ hLimitPercent 85 $ padRight (Pad 1) $ B.border $ padRight Max $ padBottom Max $ showCursor Preview  (Location (0,0)) selection
+  (selectedFileName, selectedContents) <- viewing (files . selectionL . _Just)
+  let selection = case mRegex of
+        Just r -> previewHighlightedContent . textWithMatches r $ selectedContents
+        Nothing -> str . massageForWidget . Text.unpack . decodeUtf8 $ selectedContents
+  pure $
+    selection &
+      showCursor Preview (Location (0,0)) &
+      padBottom Max &
+      padRight Max &
+      B.borderWithLabel (str selectedFileName) &
+      padRight (Pad 1) &
+      hLimitPercent 85
 
 previewHighlightedContent :: Seq TextWithMatch -> Widget Name
 previewHighlightedContent Seq.Empty = str " "

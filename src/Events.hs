@@ -2,7 +2,7 @@ module Events (handleEvent) where
 
 import Types
 
-import LensUtil
+import Util
 import Brick
 import Lens.Micro
 import qualified Brick.Widgets.List as List
@@ -18,8 +18,8 @@ handleEvent (VtyEvent (V.EvKey (V.KChar '\t') [])) = focus %= nextName
 handleEvent (VtyEvent (V.EvKey V.KBackTab [])) = focus %= prevName
 handleEvent (AppEvent (FilesProcessed fs)) = do
   prevSelIx <- use (files . listSelectedL)
-  (files . listElementsL) %= flip mappend (Vec.fromList (toList fs))
-  (files.listSelectedL) .= case prevSelIx of
+  files . listElementsL %= flip mappend (Vec.fromList (toList fs))
+  files.listSelectedL .= case prevSelIx of
                              Nothing -> Just 0
                              Just x -> Just x
 handleEvent e = do
