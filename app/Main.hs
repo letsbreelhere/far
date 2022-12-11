@@ -5,17 +5,21 @@ import Rendering
 import Gitignore
 
 import Brick
-import System.Directory
+import Brick.BChan (newBChan, writeBChan)
+import Control.Concurrent (forkIO)
+import Events
 import Lens.Micro
-import qualified Data.Foldable as L
-import qualified Brick.Widgets.List as List
+import System.Directory
+import System.Environment (getArgs)
+import Util
 import qualified Brick.Widgets.Edit as Edit
+import qualified Brick.Widgets.List as List
+import qualified Data.ByteString as BS
+import qualified Data.Foldable as L
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
-import qualified Data.ByteString as BS
-import Control.Monad (filterM)
-import Events
-import System.Environment (getArgs)
+import qualified Graphics.Vty as Vty
+import qualified Data.Sequence as Seq
 
 chooseCursor :: AppState -> [CursorLocation Name] -> Maybe (CursorLocation Name)
 chooseCursor s = L.find (hasName (s^.focus))
@@ -45,10 +49,16 @@ main = do
   let path = case args of
                (p:_) -> p
                _ -> "."
-  fs <- filterM doesFileExist =<< getFilteredContents path
-  fsWithContents <- mapM (\f -> fmap (f ,) (BS.readFile f)) fs
-  let fList = List.list FileBrowser (Vec.fromList fsWithContents) 1
+  fs <- fmap Seq.sort . filterMSeq doesFileExist =<< getFilteredContents path
+  chan <- newBChan 10
+  let process fs = do
+        writeBChan chan . FilesProcessed =<< mapM (\f -> fmap (f,) (BS.readFile f)) fs
+  _ <- forkIO $ do
+    mapM_ process (Seq.chunksOf 10 fs)
+  let fList = List.list FileBrowser Vec.empty 1
+      buildVty = Vty.mkVty Vty.defaultConfig
       editorFrom = Edit.editor FromInput (Just 1) ""
       editorTo = Edit.editor ToInput (Just 1) ""
-  _ <- defaultMain ui (AppState FromInput fList editorFrom editorTo)
+  initialVty <- buildVty
+  _ <- customMain initialVty buildVty (Just chan) ui (AppState FromInput fList editorFrom editorTo)
   pure ()

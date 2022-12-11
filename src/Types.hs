@@ -12,6 +12,7 @@ import Data.ByteString (ByteString)
 import Data.Text (Text)
 import qualified Brick.Widgets.List as List
 import qualified Brick.Widgets.Edit as Edit
+import Data.Sequence (Seq)
 
 data Name = Preview | FileBrowser | FromInput | ToInput
   deriving (Show, Ord, Eq, Enum, Bounded)
@@ -40,7 +41,7 @@ selectionL = to (fmap snd . List.listSelectedElement)
 editorContentL :: SimpleGetter (Edit.Editor Text n) Text
 editorContentL = Edit.editContentsL . to getText . to Text.concat
 
-type Event = ()
+data Event = FilesProcessed (Seq (String, ByteString))
 
 data Match = Match
   { _matchIndex :: Int

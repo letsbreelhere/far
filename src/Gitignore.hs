@@ -1,11 +1,15 @@
 module Gitignore (getFilteredContents) where
 
+import Control.Monad (join)
+import Data.Sequence (Seq)
+import GHC.IO (unsafeInterleaveIO)
 import System.Directory
 import System.FilePath
-import Control.Monad (filterM)
-import GHC.IO (unsafeInterleaveIO)
-import qualified System.FilePath.Glob as Glob
+import Util
 import qualified Data.List as L
+import qualified Data.Sequence as Seq
+import qualified System.FilePath.Glob as Glob
+import Debug.Trace (traceM)
 
 data Pattern = Pattern
   { pNegated :: Bool
@@ -13,7 +17,7 @@ data Pattern = Pattern
   }
   deriving (Show)
 
-getFilteredContents :: FilePath -> IO [FilePath]
+getFilteredContents :: FilePath -> IO (Seq FilePath)
 getFilteredContents path = do
   patterns <- gitIgnorePatterns path
   getDirFiltered (pure . filterPath patterns) path
@@ -33,13 +37,14 @@ matchPattern fname (Pattern negated glob) =
   let match = Glob.match glob fname
    in if negated then not match else match
 
-getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO [FilePath]
+getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO (Seq FilePath)
 getDirFiltered predicate path = do
-    paths <- L.sort <$> listDirectory path
-    filteredPaths <- filterM predicate (mkRel <$> paths)
-    dirs <- filterM doesDirectoryExist filteredPaths
-    next <- unsafeInterleaveIO . fmap concat . mapM (getDirFiltered predicate) $ dirs
-    pure $ filteredPaths ++ next
+    traceM path
+    paths <- Seq.fromList <$> listDirectory path
+    filteredPaths <- filterMSeq predicate (mkRel <$> paths)
+    dirs <- filterMSeq doesDirectoryExist filteredPaths
+    next <- unsafeInterleaveIO . fmap join . mapM (getDirFiltered predicate) $ dirs
+    pure $ filteredPaths <> next
 
     where mkRel = if path == "." then id else (path </>)
 
