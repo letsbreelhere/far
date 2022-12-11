@@ -15,6 +15,7 @@ import qualified Graphics.Vty as V
 import qualified Data.ByteString as BS
 import Control.Monad (filterM)
 import Events
+import System.Environment (getArgs)
 
 chooseCursor :: AppState -> [CursorLocation Name] -> Maybe (CursorLocation Name)
 chooseCursor s = L.find (hasName (s^.focus))
@@ -40,7 +41,11 @@ ui = App
 
 main :: IO ()
 main = do
-  fs <- filterM doesFileExist =<< getFilteredContents
+  args <- getArgs
+  let path = case args of
+               (p:_) -> p
+               _ -> "."
+  fs <- filterM doesFileExist =<< getFilteredContents path
   fsWithContents <- mapM (\f -> fmap (f ,) (BS.readFile f)) fs
   let fList = List.list FileBrowser (Vec.fromList fsWithContents) 1
       editorFrom = Edit.editor FromInput (Just 1) ""

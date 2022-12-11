@@ -13,10 +13,17 @@ data Pattern = Pattern
   }
   deriving (Show)
 
-getFilteredContents :: IO [FilePath]
-getFilteredContents = do
-  patterns <- gitIgnorePatterns
-  getDirFiltered (pure . filterPath patterns) "."
+getFilteredContents :: FilePath -> IO [FilePath]
+getFilteredContents path = do
+  patterns <- gitIgnorePatterns path
+  getDirFiltered (pure . filterPath patterns) path
+
+gitIgnorePatterns :: FilePath -> IO [Pattern]
+gitIgnorePatterns path = do
+  exists <- doesFileExist $ path </> ".gitignore"
+  fmap (lineToPattern (path </> ".git/") ++) $ if exists
+    then concatMap (lineToPattern . (path </>)) . lines <$> readFile (path </> ".gitignore")
+    else pure []
 
 filterPath :: Foldable t => t Pattern -> FilePath -> Bool
 filterPath ps fname = not . any (matchPattern fname) $ ps
@@ -53,10 +60,3 @@ lineToPattern patternString = do
         stripLeadingDot p
           | "./" `L.isPrefixOf` p = drop 2 p
           | otherwise = p
-
-gitIgnorePatterns :: IO [Pattern]
-gitIgnorePatterns = do
-  exists <- doesFileExist ".gitignore"
-  fmap (lineToPattern ".git/" ++) $ if exists
-    then concatMap lineToPattern . lines <$> readFile ".gitignore"
-    else pure []
