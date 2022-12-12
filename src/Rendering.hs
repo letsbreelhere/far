@@ -4,6 +4,7 @@ module Rendering (module Rendering) where
 
 import Search (textWithMatches, mkRegex)
 import Types
+import Util
 
 import Brick
 import Control.Monad.Reader (Reader, MonadReader (ask), runReader)

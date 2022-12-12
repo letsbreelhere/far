@@ -55,7 +55,7 @@ main = do
                (p:_) -> p
                _ -> "."
   fs <- fmap Seq.sort . filterMSeq doesFileExist =<< getFilteredContents path
-  chan <- newBChan 10
+  chan <- newBChan 1000
   let process fss = do
         readChunks <- mapM (\f -> fmap (f,) (BS.readFile f)) fss
         writeBChan chan . FilesProcessed $ readChunks
@@ -64,7 +64,17 @@ main = do
   let fList = List.list FileBrowser Vec.empty 1
       editorFrom = Edit.editor FromInput (Just 1) ""
       editorTo = Edit.editor ToInput (Just 1) ""
-      initialState = AppState FromInput mempty fList editorFrom editorTo (length fs)
+      initialState = AppState
+        { _focus=FromInput
+        , _files=mempty
+        , _matchedFiles=fList
+        , _curMatchIndex=0
+        , _curFile=undefined
+        , _regexFrom=editorFrom
+        , _regexTo=editorTo
+        , _totalFiles=length fs
+        , _eventChan=chan
+        }
   initialVty <- buildVty
   _ <- customMain initialVty buildVty (Just chan) ui initialState
   pure ()
