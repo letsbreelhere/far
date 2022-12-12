@@ -1,10 +1,10 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DeriveFunctor #-}
 
 module Gitignore (getFilteredContents) where
 
 import Control.Monad (join)
 import Data.Sequence (Seq)
-import GHC.IO (unsafeInterleaveIO)
+import GHC.IO (unsafeInterleaveIO, evaluate)
 import Lens.Micro
 import Lens.Micro.TH
 import System.Directory
@@ -14,19 +14,20 @@ import qualified Data.List as L
 import qualified Data.Sequence as Seq
 import qualified System.FilePath.Glob as Glob
 
-data Pattern = Pattern
+data Pattern a = Pattern
   { _pNegated :: Bool
-  , _globPattern :: String
+  , _globPattern :: a
   }
-  deriving (Show)
+  deriving (Show, Functor)
 makeLenses ''Pattern
 
 getFilteredContents :: FilePath -> IO (Seq FilePath)
 getFilteredContents path = do
   patterns <- gitIgnorePatterns path
-  getDirFiltered (pure . filterPath patterns) path
+  patterns' <- evaluate $ map (fmap Glob.compile) patterns
+  getDirFiltered (pure . filterPath patterns') path
 
-gitIgnorePatterns :: FilePath -> IO [Pattern]
+gitIgnorePatterns :: FilePath -> IO [Pattern String]
 gitIgnorePatterns path = do
   exists <- doesFileExist $ path </> ".gitignore"
   fmap (lineToPattern (path </> ".git/") ++) $ if exists
@@ -34,25 +35,25 @@ gitIgnorePatterns path = do
     else pure []
   where parseLine line = map (\p -> p & globPattern %~ (path </>)) $ lineToPattern line
 
-filterPath :: Foldable t => t Pattern -> FilePath -> Bool
+filterPath :: Foldable t => t (Pattern Glob.Pattern) -> FilePath -> Bool
 filterPath ps fname = not . any (matchPattern fname) $ ps
 
-matchPattern :: FilePath -> Pattern -> Bool
+matchPattern :: FilePath -> Pattern Glob.Pattern -> Bool
 matchPattern fname (Pattern negated glob) =
-  let match = Glob.match (Glob.compile glob) fname
+  let match = Glob.match glob fname
    in if negated then not match else match
 
 getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO (Seq FilePath)
 getDirFiltered predicate path = do
-    paths <- Seq.fromList <$> listDirectory path
-    filteredPaths <- filterMSeq predicate (mkRel <$> paths)
-    dirs <- filterMSeq doesDirectoryExist filteredPaths
-    next <- unsafeInterleaveIO . fmap join . mapM (getDirFiltered predicate) $ dirs
-    pure $ filteredPaths <> next
+  paths <- Seq.fromList <$> listDirectory path
+  filteredPaths <- filterMSeq predicate (mkRel <$> paths)
+  dirs <- filterMSeq doesDirectoryExist filteredPaths
+  next <- unsafeInterleaveIO . fmap join . mapM (getDirFiltered predicate) $ dirs
+  pure $ filteredPaths <> next
 
-    where mkRel = if path == "." then id else (path </>)
+  where mkRel = if path == "." then id else (path </>)
 
-lineToPattern :: String -> [Pattern]
+lineToPattern :: String -> [Pattern String]
 lineToPattern "" = []
 lineToPattern ('#':_) = []
 lineToPattern ('!':p) = map (\p' -> p' & pNegated .~ True) (lineToPattern p)
@@ -65,4 +66,6 @@ lineToPattern patternString = do
   where prependWildcard p
           | "**/" `L.isPrefixOf` p = [p]
           | otherwise = [p, "**/" <> p]
-        appendWildcard p = [p, p </> "**"]
+        appendWildcard p
+          | "/" `L.isSuffixOf` p = [p, p <> "**"]
+          | otherwise = [p]

@@ -60,7 +60,7 @@ main = do
         readChunks <- mapM (\f -> fmap (f,) (BS.readFile f)) fss
         writeBChan chan . FilesProcessed $ readChunks
   _ <- forkIO $ do
-    mapM_ process (Seq.chunksOf 10 fs)
+    mapM_ process (Seq.chunksOf 1000 fs)
   let fList = List.list FileBrowser Vec.empty 1
       editorFrom = Edit.editor FromInput (Just 1) ""
       editorTo = Edit.editor ToInput (Just 1) ""
