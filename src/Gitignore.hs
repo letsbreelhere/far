@@ -1,8 +1,12 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Gitignore (getFilteredContents) where
 
 import Control.Monad (join)
 import Data.Sequence (Seq)
 import GHC.IO (unsafeInterleaveIO)
+import Lens.Micro
+import Lens.Micro.TH
 import System.Directory
 import System.FilePath
 import Util
@@ -11,10 +15,11 @@ import qualified Data.Sequence as Seq
 import qualified System.FilePath.Glob as Glob
 
 data Pattern = Pattern
-  { pNegated :: Bool
-  , globPattern :: Glob.Pattern
+  { _pNegated :: Bool
+  , _globPattern :: String
   }
   deriving (Show)
+makeLenses ''Pattern
 
 getFilteredContents :: FilePath -> IO (Seq FilePath)
 getFilteredContents path = do
@@ -25,15 +30,16 @@ gitIgnorePatterns :: FilePath -> IO [Pattern]
 gitIgnorePatterns path = do
   exists <- doesFileExist $ path </> ".gitignore"
   fmap (lineToPattern (path </> ".git/") ++) $ if exists
-    then concatMap (lineToPattern . (path </>)) . lines <$> readFile (path </> ".gitignore")
+    then concatMap parseLine . lines <$> readFile (path </> ".gitignore")
     else pure []
+  where parseLine line = map (\p -> p & globPattern %~ (path </>)) $ lineToPattern line
 
 filterPath :: Foldable t => t Pattern -> FilePath -> Bool
 filterPath ps fname = not . any (matchPattern fname) $ ps
 
 matchPattern :: FilePath -> Pattern -> Bool
 matchPattern fname (Pattern negated glob) =
-  let match = Glob.match glob fname
+  let match = Glob.match (Glob.compile glob) fname
    in if negated then not match else match
 
 getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO (Seq FilePath)
@@ -49,17 +55,14 @@ getDirFiltered predicate path = do
 lineToPattern :: String -> [Pattern]
 lineToPattern "" = []
 lineToPattern ('#':_) = []
-lineToPattern ('!':p) = map (\p' -> p' { pNegated=True }) (lineToPattern p)
+lineToPattern ('!':p) = map (\p' -> p' & pNegated .~ True) (lineToPattern p)
+lineToPattern ('/':p) = lineToPattern p
+lineToPattern ('.':'/':p) = lineToPattern p
 lineToPattern patternString = do
-  postWildcard <- appendWildcard (stripLeadingDot patternString)
+  postWildcard <- appendWildcard patternString
   preWildcard <- prependWildcard postWildcard
-  pure $ Pattern False (Glob.compile preWildcard)
+  pure $ Pattern False preWildcard
   where prependWildcard p
           | "**/" `L.isPrefixOf` p = [p]
           | otherwise = [p, "**/" <> p]
-        appendWildcard p
-          | "/" `L.isSuffixOf` p = [p <> "**"]
-          | otherwise = [p]
-        stripLeadingDot p
-          | "./" `L.isPrefixOf` p = drop 2 p
-          | otherwise = p
+        appendWildcard p = [p, p </> "**"]
