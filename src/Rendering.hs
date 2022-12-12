@@ -17,6 +17,7 @@ import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
+import qualified Brick.Widgets.ProgressBar as P
 import Data.Foldable (Foldable(toList))
 import qualified Data.Sequence as Seq
 import Data.Text.Encoding (decodeUtf8, decodeUtf8')
@@ -41,10 +42,20 @@ drawUI s = [withRenderCtx uiRoot s]
 
 uiRoot :: RenderCtx (Widget Name)
 uiRoot = do
-  ip <- inputPane
-  fp <- filesPane
-  pp <- previewPane
-  pure $ padAll 5 $ C.center $ B.border $ (fp <=> ip) <+> pp
+  inputPane' <- inputPane
+  filesPane' <- filesPane
+  previewPane' <- previewPane
+  progressPane' <- progressPane
+  pure $ padAll 5 $ C.center $ B.border $
+    (progressPane' <=> filesPane' <=> inputPane') <+> previewPane'
+
+progressPane :: RenderCtx (Widget Name)
+progressPane = do
+  curFiles <- fromIntegral . length <$> viewing files
+  total <- fromIntegral <$> viewing totalFiles
+  pure $ if curFiles < total
+    then P.progressBar Nothing (curFiles / total)
+    else str " "
 
 inputPane :: RenderCtx (Widget Name)
 inputPane = do
@@ -60,7 +71,7 @@ filesPane :: RenderCtx (Widget Name)
 filesPane = do
   hasFocus <- (FileBrowser ==) <$> viewing focus
   fs <- viewing matchedFiles
-  pure $ padTop (Pad 1) $ L.renderList (renderFile hasFocus) hasFocus fs
+  pure $ L.renderList (renderFile hasFocus) hasFocus fs
 
 renderFile :: Bool -> Bool -> (String, ByteString) -> Widget n
 renderFile hasFocus selected (fname, _) = attr (str fname)

@@ -34,6 +34,7 @@ data AppState = AppState
   , _matchedFiles :: List Name (String, ByteString)
   , _regexFrom :: Editor Text Name
   , _regexTo :: Editor Text Name
+  , _totalFiles :: Int
   }
 makeLenses ''AppState
 
