@@ -59,7 +59,7 @@ inputPane = do
 filesPane :: RenderCtx (Widget Name)
 filesPane = do
   hasFocus <- (FileBrowser ==) <$> viewing focus
-  fs <- viewing files
+  fs <- viewing matchedFiles
   pure $ padTop (Pad 1) $ L.renderList (renderFile hasFocus) hasFocus fs
 
 renderFile :: Bool -> Bool -> (String, ByteString) -> Widget n
@@ -73,7 +73,7 @@ previewPane :: RenderCtx (Widget Name)
 previewPane = do
   grepRegex <- viewing (regexFrom . editorContentL)
   let mRegex = mkRegex $ Text.unpack grepRegex
-  (selectedFileName, selectedContents) <- viewing (files . selectionL . _Just)
+  (selectedFileName, selectedContents) <- viewing (matchedFiles . selectionL . _Just)
   let selection = case mRegex of
         Just r -> previewHighlightedContent . textWithMatches r $ selectedContents
         Nothing -> str . massageForWidget . Text.unpack . decodeUtf8 $ selectedContents

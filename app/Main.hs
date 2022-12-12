@@ -43,8 +43,12 @@ ui = App
   , appStartEvent = pure ()
   }
 
+buildVty :: IO Vty.Vty
+buildVty = Vty.mkVty Vty.defaultConfig
+
 main :: IO ()
 main = do
+  initialVty <- buildVty
   args <- getArgs
   let path = case args of
                (p:_) -> p
@@ -57,9 +61,8 @@ main = do
   _ <- forkIO $ do
     mapM_ process (Seq.chunksOf 10 fs)
   let fList = List.list FileBrowser Vec.empty 1
-      buildVty = Vty.mkVty Vty.defaultConfig
       editorFrom = Edit.editor FromInput (Just 1) ""
       editorTo = Edit.editor ToInput (Just 1) ""
-  initialVty <- buildVty
-  _ <- customMain initialVty buildVty (Just chan) ui (AppState FromInput fList editorFrom editorTo)
+      initialState = AppState FileBrowser mempty fList editorFrom editorTo
+  _ <- customMain initialVty buildVty (Just chan) ui initialState
   pure ()

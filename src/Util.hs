@@ -33,5 +33,5 @@ infix 4 ?=
 (?=) :: MonadState s m => Lens' s (Maybe a) -> a -> m ()
 (?=) = equalify (?~)
 
-use :: MonadState s m => Lens' s a -> m a
+use :: MonadState s m => Getting a s a -> m a
 use l = gets (^. l)

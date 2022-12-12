@@ -9,7 +9,6 @@ import Util
 import qualified Data.List as L
 import qualified Data.Sequence as Seq
 import qualified System.FilePath.Glob as Glob
-import Debug.Trace (traceM)
 
 data Pattern = Pattern
   { pNegated :: Bool
@@ -39,7 +38,6 @@ matchPattern fname (Pattern negated glob) =
 
 getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO (Seq FilePath)
 getDirFiltered predicate path = do
-    traceM path
     paths <- Seq.fromList <$> listDirectory path
     filteredPaths <- filterMSeq predicate (mkRel <$> paths)
     dirs <- filterMSeq doesDirectoryExist filteredPaths
