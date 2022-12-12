@@ -13,6 +13,7 @@ import qualified Brick.Widgets.List as List
 import qualified Data.Text as Text
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
+import Control.Monad (when)
 
 updateMatchedFiles :: EventM Name AppState ()
 updateMatchedFiles = do
@@ -44,7 +45,11 @@ handleEvent e = do
       case e of
         VtyEvent vtyEvent -> fileBrowserEventHandler vtyEvent
         _ -> pure ()
-    FromInput -> zoom regexFrom $ Edit.handleEditorEvent e
+    FromInput -> do
+      prevFrom <- use (regexFrom . editorContentL)
+      zoom regexFrom $ Edit.handleEditorEvent e
+      newFrom <- use (regexFrom . editorContentL)
+      when (prevFrom /= newFrom) updateMatchedFiles
     ToInput -> zoom regexTo $ Edit.handleEditorEvent e
     _ -> pure ()
 

@@ -64,7 +64,7 @@ main = do
   let fList = List.list FileBrowser Vec.empty 1
       editorFrom = Edit.editor FromInput (Just 1) ""
       editorTo = Edit.editor ToInput (Just 1) ""
-      initialState = AppState FileBrowser mempty fList editorFrom editorTo (length fs)
+      initialState = AppState FromInput mempty fList editorFrom editorTo (length fs)
   initialVty <- buildVty
   _ <- customMain initialVty buildVty (Just chan) ui initialState
   pure ()
