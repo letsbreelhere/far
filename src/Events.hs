@@ -5,7 +5,8 @@ import Types
 import Util
 
 import Brick
-import Brick.Widgets.List (listSelectedL, listElementsL)
+import Brick.BChan (writeBChan)
+import Brick.Widgets.List (listElementsL)
 import Data.Foldable
 import Lens.Micro
 import qualified Text.Regex.PCRE as Regex
@@ -14,31 +15,36 @@ import qualified Brick.Widgets.List as List
 import qualified Data.Text as Text
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
-import Control.Monad (when)
+import Data.Maybe (isJust)
+import Control.Monad (when, guard)
+import Control.Monad.IO.Class (MonadIO(liftIO))
+
+sendEvent :: Event -> EventM n AppState ()
+sendEvent e = do
+  chan <- use eventChan
+  liftIO $ writeBChan chan e
 
 updateMatchedFiles :: EventM Name AppState ()
 updateMatchedFiles = do
   allFiles <- use files
   grepRegex <- use (regexFrom . editorContentL)
-  let mRegex = mkRegex $ Text.unpack grepRegex
-  let matchedFiles' = case mRegex of
-        Just r -> Vec.filter (\(_, c) -> not . null $ Regex.matchOnce r c) allFiles
+  let mRegex = do
+        guard (not . Text.null $ grepRegex)
+        mkRegex (Text.unpack grepRegex)
+      matchedFiles' = case mRegex of
+        Just r -> Vec.filter (\(_, c) -> isJust $ Regex.matchOnce r c) allFiles
         Nothing -> allFiles
-  matchedFiles.listElementsL.= matchedFiles'
+  sendEvent (MatchedFilesProcessed matchedFiles')
 
 handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleEvent (VtyEvent (V.EvKey V.KEsc [])) = halt
 handleEvent (VtyEvent (V.EvKey (V.KChar '\t') [])) = focus %= nextName
 handleEvent (VtyEvent (V.EvKey V.KBackTab [])) = focus %= prevName
 handleEvent (AppEvent (FilesProcessed fs)) = do
-  prevSelIx <- use (matchedFiles.listSelectedL)
   files %= flip mappend (Vec.fromList (toList fs))
   updateMatchedFiles
+handleEvent (AppEvent (MatchedFilesProcessed fs)) = matchedFiles.listElementsL.= fs
 
-  -- FIXME this should choose the selection index based on the key.
-  matchedFiles.listSelectedL.= case prevSelIx of
-                             Nothing -> Just 0
-                             Just x -> Just x
 handleEvent e = do
   s <- get
   case s^.focus of
