@@ -81,7 +81,8 @@ type CaptureGroup = [Match]
 
 data TextWithMatch = TextWithMatch
   { _content :: ByteString
-  , _mayIndex :: Maybe Int
+  , _mayCaptureIndex :: Maybe Int
+  , _mayMatchIndex :: Maybe Int
   }
   deriving (Show)
 makeLenses ''TextWithMatch

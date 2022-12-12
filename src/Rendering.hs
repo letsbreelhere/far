@@ -77,8 +77,8 @@ filesPane = do
 renderFile :: Bool -> Bool -> (String, ByteString) -> Widget n
 renderFile hasFocus selected (fname, _) = attr (str fname)
   where attr = withAttr $ case (selected, hasFocus) of
-                 (True, True) -> attrName "highlightSelection"
-                 (True, False) -> attrName "highlight"
+                 (True, False) -> attrName "selectedFile"
+                 (True, True) -> attrName "focusSelectedFile"
                  _ -> mempty
 
 previewPane :: RenderCtx (Widget Name)
@@ -86,9 +86,9 @@ previewPane = do
   grepRegex <- viewing (regexFrom . editorContentL)
   let mRegex = mkRegex $ Text.unpack grepRegex
   (selectedFileName, selectedContents) <- viewing (matchedFiles . selectionL . _Just)
-  let selection = case mRegex of
-        Just r -> previewHighlightedContent . textWithMatches r $ selectedContents
-        Nothing -> str . massageForWidget . Text.unpack . decodeUtf8 $ selectedContents
+  selection <- case mRegex of
+    Just r -> previewHighlightedContent . textWithMatches r $ selectedContents
+    Nothing -> pure . str . massageForWidget . Text.unpack . decodeUtf8 $ selectedContents
   pure $
     selection &
       showCursor Preview (Location (0,0)) &
@@ -98,13 +98,15 @@ previewPane = do
       padRight (Pad 1) &
       hLimitPercent 85
 
-previewHighlightedContent :: Seq TextWithMatch -> Widget Name
-previewHighlightedContent Seq.Empty = str " "
-previewHighlightedContent twms =
+previewHighlightedContent :: Seq TextWithMatch -> RenderCtx (Widget Name)
+previewHighlightedContent Seq.Empty = pure $ str " "
+previewHighlightedContent twms = do
+  curMatch <- viewing curMatchIndex
   let broken = breakLines twms
-      previewAttr twm = case twm^.mayIndex of
-                          Just _ -> attrName "highlightSelection"
-                          Nothing -> mempty
+      previewAttr twm = case (twm^.mayCaptureIndex, twm^.mayMatchIndex) of
+                          (Just _, Just mi) ->
+                            if mi == curMatch then attrName "selectedMatch" else attrName "match"
+                          _ -> mempty
       attemptDecode :: TextWithMatch -> Maybe String
       attemptDecode twm = case decodeUtf8' . view content $ twm of
                             Left _ -> Nothing
@@ -115,9 +117,9 @@ previewHighlightedContent twms =
         pure . withAttr (previewAttr twm) . str . massageForWidget $ decoded
       renderLine :: [TextWithMatch] -> Maybe (Widget Name)
       renderLine = fmap hBox . mapM renderTwm
-   in case mapM (renderLine . toList) (toList broken) of
-        Just ls -> vBox ls
-        Nothing -> withAttr (attrName "error") $ str "[This file contains invalid characters and will not be displayed.]"
+  pure $ case mapM (renderLine . toList) (toList broken) of
+           Just ls -> vBox ls
+           Nothing -> withAttr (attrName "error") $ str "[This file contains invalid characters and will not be displayed.]"
 
 
 breakLines :: Seq TextWithMatch -> Seq (Seq TextWithMatch)

@@ -6,7 +6,7 @@ import Util
 
 import Brick
 import Brick.BChan (writeBChan)
-import Brick.Widgets.List (listElementsL)
+import Brick.Widgets.List (listElementsL, listSelectedL)
 import Data.Foldable
 import Lens.Micro
 import qualified Text.Regex.PCRE as Regex
@@ -43,7 +43,9 @@ handleEvent (VtyEvent (V.EvKey V.KBackTab [])) = focus %= prevName
 handleEvent (AppEvent (FilesProcessed fs)) = do
   files %= flip mappend (Vec.fromList (toList fs))
   updateMatchedFiles
-handleEvent (AppEvent (MatchedFilesProcessed fs)) = matchedFiles.listElementsL.= fs
+handleEvent (AppEvent (MatchedFilesProcessed fs)) = do
+  matchedFiles.listElementsL.= fs
+  matchedFiles.listSelectedL.= Just 0
 
 handleEvent e = do
   s <- get

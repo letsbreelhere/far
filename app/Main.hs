@@ -28,12 +28,13 @@ chooseCursor s = L.find (hasName (s^.focus))
 
 mapForApp :: AttrMap
 mapForApp = attrMap V.defAttr
-  [ (attrName "input", V.currentAttr `V.withForeColor` V.blue)
+  [ (Progress.progressCompleteAttr, V.currentAttr `V.withStyle` V.reverseVideo)
+  , (attrName "input", V.currentAttr `V.withForeColor` V.blue)
   , (attrName "error", V.currentAttr `V.withForeColor` V.red)
-  , (attrName "selection", V.currentAttr `V.withForeColor` V.blue)
-  , (attrName "highlight", V.currentAttr `V.withStyle` V.reverseVideo)
-  , (attrName "highlightSelection", V.currentAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
-  , (Progress.progressCompleteAttr, V.currentAttr `V.withStyle` V.reverseVideo)
+  , (attrName "selectedFile", V.currentAttr `V.withStyle` V.reverseVideo)
+  , (attrName "focusSelectedFile", V.currentAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
+  , (attrName "match", V.currentAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
+  , (attrName "selectedMatch", V.currentAttr `V.withForeColor` V.yellow `V.withStyle` V.reverseVideo)
   ]
 
 ui :: App AppState Event Name
