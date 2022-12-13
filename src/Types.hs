@@ -59,7 +59,7 @@ data AppState = AppState
   { _focus :: Name
   , _files :: Vector (String, ByteString)
   , _matchedFiles :: List Name (String, ByteString)
-  , _curFile :: File
+  , _curFile :: Maybe File
   , _curMatchIndex :: Int
   , _regexFrom :: Editor Text Name
   , _regexTo :: Editor Text Name

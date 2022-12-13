@@ -96,7 +96,7 @@ previewPane = do
       padRight Max &
       B.borderWithLabel (str selectedFileName) &
       padRight (Pad 1) &
-      hLimitPercent 85
+      hLimitPercent 75
 
 previewHighlightedContent :: Seq TextWithMatch -> RenderCtx (Widget Name)
 previewHighlightedContent Seq.Empty = pure $ str " "
