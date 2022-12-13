@@ -28,6 +28,7 @@ dependencies:
 - filepath
 - microlens
 - microlens-th
+- microlens-mtl
 - mtl
 - regex-pcre
 - text

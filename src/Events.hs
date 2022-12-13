@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternSynonyms #-}
 module Events (handleEvent) where
 
 import Search (mkRegex)
@@ -9,10 +10,12 @@ import Brick.BChan (writeBChan)
 import Brick.Widgets.List (listElementsL, listSelectedL)
 import Control.Monad (when, guard)
 import Control.Monad.IO.Class (MonadIO(liftIO))
+import Control.Monad.State (MonadState)
 import Data.ByteString.Char8 (elemIndices)
 import Data.Foldable
 import Data.Maybe (isJust)
 import Lens.Micro
+import Lens.Micro.Mtl
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
 import qualified Data.Text as Text
@@ -37,10 +40,21 @@ updateMatchedFiles = do
         Nothing -> allFiles
   sendEvent (MatchedFilesProcessed matchedFiles')
 
+pattern PlainKey :: V.Key -> BrickEvent n e
+pattern PlainKey c = VtyEvent (V.EvKey c [])
+
+handlerWithChanges :: (MonadState s m, Eq a) =>
+  (ev -> m ()) -> ev -> Getting a s a -> (a -> m ()) -> m ()
+handlerWithChanges handler event lens action = do
+  prev <- use lens
+  handler event
+  next <- use lens
+  when (prev /= next) (action next)
+
 handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
-handleEvent (VtyEvent (V.EvKey V.KEsc [])) = halt
-handleEvent (VtyEvent (V.EvKey (V.KChar '\t') [])) = focus %= nextName
-handleEvent (VtyEvent (V.EvKey V.KBackTab [])) = focus %= prevName
+handleEvent (PlainKey V.KEsc) = halt
+handleEvent (PlainKey (V.KChar '\t')) = focus %= nextName
+handleEvent (PlainKey V.KBackTab) = focus %= prevName
 handleEvent (AppEvent (FilesProcessed fs)) = do
   files %= flip mappend (Vec.fromList (toList fs))
   updateMatchedFiles
@@ -54,19 +68,13 @@ handleEvent e = do
     FileBrowser ->
       case e of
         VtyEvent vtyEvent -> do
-          prevFile <- use (matchedFiles . selectionL)
-          fileBrowserEventHandler vtyEvent
-          nextFile <- use (matchedFiles . selectionL)
-          when (prevFile /= nextFile) $
+          handlerWithChanges fileBrowserEventHandler vtyEvent (matchedFiles . selectionL) $ \nextFile ->
             curFile .= do
               (fName, fContents) <- nextFile
               pure $ File fName fContents (elemIndices '\n' fContents)
         _ -> pure ()
     FromInput -> do
-      prevFrom <- use (regexFrom . editorContentL)
-      zoom regexFrom $ Edit.handleEditorEvent e
-      newFrom <- use (regexFrom . editorContentL)
-      when (prevFrom /= newFrom) updateMatchedFiles
+      handlerWithChanges (zoom regexFrom . Edit.handleEditorEvent) e (regexFrom . editorContentL) $ const updateMatchedFiles
     ToInput -> zoom regexTo $ Edit.handleEditorEvent e
     _ -> pure ()
 
