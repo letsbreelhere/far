@@ -2,6 +2,7 @@
 
 module Types (module Types) where
 
+import Lens.Micro
 import Lens.Micro.Extras (view)
 import Lens.Micro.TH (makeLenses)
 import Brick.Widgets.List (List)
@@ -13,7 +14,6 @@ import Data.Sequence (Seq)
 import Data.Vector (Vector)
 import Brick.BChan (BChan)
 import Control.Concurrent (ThreadId)
-import qualified Data.List.NonEmpty as NE
 
 data Name = Preview | FileBrowser | FromInput | ToInput
   deriving (Show, Ord, Eq, Enum, Bounded)
@@ -73,14 +73,19 @@ data AppState = AppState
 makeLenses ''AppState
 
 data Match = Match
-  { _matchIndex :: Int
+  { _matchStartIndex :: Int
   , _matchLength :: Int
   , _captureIndex :: Int
   }
   deriving (Show, Eq)
 makeLenses ''Match
 
-type CaptureGroup = NonEmpty Match
+data CaptureGroup = CaptureGroup
+  { _matches :: NonEmpty Match
+  , _groupIndex :: Int
+  }
+  deriving (Show)
+makeLenses ''CaptureGroup
 
 data TextWithMatch = TextWithMatch
   { _content :: ByteString
@@ -89,6 +94,5 @@ data TextWithMatch = TextWithMatch
   deriving (Show)
 makeLenses ''TextWithMatch
 
-twmMatchIndex :: TextWithMatch -> Maybe Int
-twmMatchIndex = fmap (view matchIndex . NE.head) . view captureGroup
-
+twmGroupL :: Getting a CaptureGroup a -> Getting (Maybe a) TextWithMatch (Maybe a)
+twmGroupL getter = captureGroup . to (fmap (view getter))

@@ -8,20 +8,21 @@ import Util
 
 import Brick
 import Control.Monad.Reader (Reader, MonadReader (ask), runReader)
+import Data.ByteString (ByteString)
+import Data.Foldable (Foldable(toList))
 import Data.Sequence (Seq(..), (<|), (|>))
+import Data.Text.Encoding (decodeUtf8, decodeUtf8')
 import Lens.Micro
 import Lens.Micro.Extras (view)
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.Text as Text
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.ProgressBar as P
-import Data.Foldable (Foldable(toList))
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence as Seq
-import Data.Text.Encoding (decodeUtf8, decodeUtf8')
+import qualified Data.Text as Text
 
 newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
   deriving (Functor, Applicative, Monad, MonadReader AppState)
@@ -106,9 +107,9 @@ previewHighlightedContent Seq.Empty = pure $ str " "
 previewHighlightedContent twms = do
   curMatch <- viewing curMatchIndex
   let broken = breakLines twms
-      previewAttr twm = case twmMatchIndex twm of
-                          Just mi ->
-                            if mi == curMatch then attrName "selectedMatch" else attrName "match"
+      previewAttr twm = case twm^.twmGroupL groupIndex of
+                          Just ci ->
+                            if ci == curMatch then attrName "selectedMatch" else attrName "match"
                           _ -> mempty
       attemptDecode :: TextWithMatch -> Maybe String
       attemptDecode twm = case decodeUtf8' . view content $ twm of
