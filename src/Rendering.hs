@@ -98,13 +98,16 @@ previewPane = do
       padRight (Pad 1) &
       hLimitPercent 75
 
+scrollTo :: Location -> Seq (Seq TextWithMatch) -> Seq (Seq TextWithMatch)
+scrollTo (Location (x,y)) twms = fmap (Seq.drop x) (Seq.drop y twms)
+
 previewHighlightedContent :: Seq TextWithMatch -> RenderCtx (Widget Name)
 previewHighlightedContent Seq.Empty = pure $ str " "
 previewHighlightedContent twms = do
   curMatch <- viewing curMatchIndex
   let broken = breakLines twms
-      previewAttr twm = case (twm^.mayCaptureIndex, twm^.mayMatchIndex) of
-                          (Just _, Just mi) ->
+      previewAttr twm = case twmMatchIndex twm of
+                          Just mi ->
                             if mi == curMatch then attrName "selectedMatch" else attrName "match"
                           _ -> mempty
       attemptDecode :: TextWithMatch -> Maybe String

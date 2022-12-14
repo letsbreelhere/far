@@ -2,6 +2,8 @@
 
 module Types (module Types) where
 
+import Lens.Micro
+import Lens.Micro.Extras (view)
 import Lens.Micro.TH (makeLenses)
 import Brick.Widgets.List (List)
 import Brick.Widgets.Edit (Editor)
@@ -81,8 +83,11 @@ type CaptureGroup = [Match]
 
 data TextWithMatch = TextWithMatch
   { _content :: ByteString
-  , _mayCaptureIndex :: Maybe Int
-  , _mayMatchIndex :: Maybe Int
+  , _captureGroup :: Maybe CaptureGroup
   }
   deriving (Show)
 makeLenses ''TextWithMatch
+
+twmMatchIndex :: TextWithMatch -> Maybe Int
+twmMatchIndex = fmap (view matchIndex . head) . view captureGroup
+

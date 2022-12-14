@@ -2,17 +2,17 @@ module Search (mkRegex, findMatches, textWithMatches) where
 
 import Types
 
-import Lens.Micro
-import qualified Text.Regex.PCRE as Regex
-import Text.Regex.PCRE (Regex)
-import Data.Foldable (Foldable(toList))
-import Data.Maybe (mapMaybe)
-import Data.List (foldl')
-import Lens.Micro.Extras (view)
-import Data.Sequence (Seq(..), (|>))
-import qualified Data.Sequence as Seq
 import Data.ByteString (ByteString)
+import Data.Foldable (Foldable(toList))
+import Data.List (foldl')
+import Data.Maybe (mapMaybe)
+import Data.Sequence (Seq(..), (|>))
+import Lens.Micro
+import Lens.Micro.Extras (view)
+import Text.Regex.PCRE (Regex)
 import qualified Data.ByteString as ByteString
+import qualified Data.Sequence as Seq
+import qualified Text.Regex.PCRE as Regex
 
 mkRegex :: String -> Maybe Regex
 mkRegex = Regex.makeRegexM
@@ -29,12 +29,12 @@ textWithMatches :: Regex -> ByteString -> Seq TextWithMatch
 textWithMatches r s =
   let cgs = findMatches r s
    in if null cgs
-        then Seq.singleton (TextWithMatch s Nothing Nothing)
+        then Seq.singleton (TextWithMatch s Nothing)
         else
           let (_, _, withoutSuffix) = foldl' (pairWithContent s) (0, 0, Seq.empty) cgs
               lastMatchEnds = matchEnds (head $ last cgs)
               suffix = slice (lastMatchEnds, ByteString.length s - lastMatchEnds) s
-              suffixWithMatch = TextWithMatch suffix Nothing Nothing
+              suffixWithMatch = TextWithMatch suffix Nothing
            in Seq.filter (not . ByteString.null . view content) (withoutSuffix |> suffixWithMatch)
 
 slice :: (Int, Int) -> ByteString -> ByteString
@@ -44,15 +44,13 @@ matchEnds :: Match -> Int
 matchEnds m = (m^.matchIndex) + (m^.matchLength)
 
 pairWithContent :: ByteString -> (Int, Int, Seq TextWithMatch) -> CaptureGroup -> (Int, Int, Seq TextWithMatch)
-pairWithContent s (maxCaptureIndex, matchCount, acc) (m:_) = (m^.matchIndex+m^.matchLength, matchCount+1, acc |> nextNonMatch |> nextMatch)
+pairWithContent s (maxCaptureIndex, matchCount, acc) cg@(m:_) = (m^.matchIndex+m^.matchLength, matchCount+1, acc |> nextNonMatch |> nextMatch)
   where nextNonMatch = TextWithMatch
                          { _content=slice (maxCaptureIndex, (m^.matchIndex) - maxCaptureIndex) s
-                         , _mayCaptureIndex=Nothing
-                         , _mayMatchIndex=Nothing
+                         , _captureGroup=Nothing
                          }
         nextMatch = TextWithMatch
                       { _content=slice (m^.matchIndex, m^.matchLength) s
-                      , _mayCaptureIndex=Just $ m^.captureIndex
-                      , _mayMatchIndex=Just matchCount
+                      , _captureGroup=Just cg
                       }
 pairWithContent _ _ [] = error "unexpected empty match"
