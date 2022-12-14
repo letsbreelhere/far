@@ -5,7 +5,7 @@ import Types
 import Data.ByteString (ByteString)
 import Data.Foldable (Foldable(toList))
 import Data.List (foldl')
-import Data.List.NonEmpty (NonEmpty(..), fromList)
+import Data.List.NonEmpty (NonEmpty(..), nonEmpty)
 import Data.Maybe (mapMaybe)
 import Data.Sequence (Seq(..), (|>))
 import Lens.Micro
@@ -23,11 +23,13 @@ findMatches :: Regex -> ByteString -> [CaptureGroup]
 findMatches r s = zipWith toCaptureGroup (Regex.matchAll r s) [0..]
 
 toCaptureGroup :: Regex.MatchArray -> Int -> CaptureGroup
-toCaptureGroup ma ix =
-  let ms = fromList $ mapMaybe toMatch (toList ma `zip` [0..])
-   in CaptureGroup { _matches=ms, _groupIndex = ix}
+toCaptureGroup ma groupIx =
+  let mayMatches = nonEmpty $ mapMaybe toMatch (toList ma `zip` [0..])
+   in case mayMatches of
+        Just ms -> CaptureGroup { _matches=ms, _groupIndex = groupIx}
+        Nothing -> error "Regex match array was unexpectedly empty"
   where toMatch ((i, _), _) | i < 0 = Nothing
-        toMatch ((i, l), c) = Just $ Match { _matchStartIndex=i, _matchLength=l, _captureIndex=c}
+        toMatch ((i, l), c) = Just $ Match { _matchStartIndex=i, _matchLength=l, _captureIndex=c }
 
 textWithMatches :: Regex -> ByteString -> Seq TextWithMatch
 textWithMatches r s =

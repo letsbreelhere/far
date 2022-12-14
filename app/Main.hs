@@ -75,6 +75,7 @@ main = do
         , _regexTo=editorTo
         , _totalFiles=length fs
         , _eventChan=chan
+        , _matchThreadId=Nothing
         }
   initialVty <- buildVty
   _ <- customMain initialVty buildVty (Just chan) ui initialState
