@@ -101,21 +101,23 @@ previewPane = do
       hLimitPercent 75
 
 scrollTo :: Location -> Seq (Seq TextWithMatch) -> Seq (Seq TextWithMatch)
-scrollTo (Location (x,y)) twms = Seq.filter (not . BS.null . view content) . (_head . content %~ BS.drop x) <$> Seq.drop y twms
+scrollTo (Location (x,y)) twms = dropEmptyHead . (_head . content %~ BS.drop x) <$> Seq.drop y twms
+  where dropEmptyHead (h:<|t) | BS.null (h^.content) = t
+        dropEmptyHead twms' = twms'
 
 previewHighlightedContent :: [CaptureGroup] -> Seq TextWithMatch -> RenderCtx (Widget Name)
 previewHighlightedContent _ Seq.Empty = pure $ str " "
 previewHighlightedContent cgs twms = do
   curGroupIx <- viewing curGroupIndex
   file <- viewing curFile
-  let row = case cgs of
+  let x = case cgs of
               [] -> 0
               _ -> let curMatch = NE.head . view matches $ cgs !! curGroupIx
                        absoluteIndex = curMatch^.matchStartIndex
-                       nearestNewline = fromMaybe 0 . nearestLT absoluteIndex $ mkBinTree (maybe [] (view newlineIndices) file)
+                       nearestNewline = fromMaybe absoluteIndex . nearestLT absoluteIndex $ mkBinTree (maybe [] (view newlineIndices) file)
                     in absoluteIndex - nearestNewline
-      col = 0
-      broken = scrollTo (Location (row, col)) $ breakLines twms
+      y = 0
+      broken = scrollTo (Location (x, y)) $ breakLines twms
       previewAttr twm = case twm^.twmGroupL groupIndex of
                           Just gi ->
                             if gi == curGroupIx then attrName "selectedMatch" else attrName "match"
@@ -129,7 +131,8 @@ previewHighlightedContent cgs twms = do
         decoded <- attemptDecode twm
         pure . withAttr (previewAttr twm) . str . massageForWidget $ decoded
       renderLine :: [TextWithMatch] -> Maybe (Widget Name)
-      renderLine = fmap hBox . mapM renderTwm
+      renderLine [] = Just $ str " "
+      renderLine twms' = fmap hBox . mapM renderTwm $ twms'
   pure $ case mapM (renderLine . toList) (toList broken) of
            Just ls -> vBox ls
            Nothing -> withAttr (attrName "error") $ str "[This file contains invalid characters and will not be displayed.]"

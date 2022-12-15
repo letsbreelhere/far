@@ -74,6 +74,8 @@ handleEvent e = do
               pure $ File fName fContents (elemIndices '\n' fContents)
         _ -> pure ()
     FromInput -> do
+      -- TODO update curFile when this changes...
+      -- Also automate these checks across all events somehow
       handlerWithChanges (zoom regexFrom . Edit.handleEditorEvent) e (regexFrom . editorContentL) $ const updateMatchedFiles
     ToInput -> zoom regexTo $ Edit.handleEditorEvent e
     _ -> pure ()
