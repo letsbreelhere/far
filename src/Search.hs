@@ -31,17 +31,17 @@ toCaptureGroup ma groupIx =
   where toMatch ((i, _), _) | i < 0 = Nothing
         toMatch ((i, l), c) = Just $ Match { _matchStartIndex=i, _matchLength=l, _captureIndex=c }
 
-textWithMatches :: Regex -> ByteString -> Seq TextWithMatch
+textWithMatches :: Regex -> ByteString -> ([CaptureGroup], Seq TextWithMatch)
 textWithMatches r s =
   let cgs = findMatches r s
    in if null cgs
-        then Seq.singleton (TextWithMatch s Nothing)
+        then (cgs, Seq.singleton (TextWithMatch s Nothing))
         else
           let (_, _, withoutSuffix) = foldl' (pairWithContent s) (0, 0, Seq.empty) cgs
               lastMatchEnds = matchEnds (NE.head . view matches $ last cgs)
               suffix = slice (lastMatchEnds, ByteString.length s - lastMatchEnds) s
               suffixWithMatch = TextWithMatch suffix Nothing
-           in Seq.filter (not . ByteString.null . view content) (withoutSuffix |> suffixWithMatch)
+           in (cgs,) $ Seq.filter (not . ByteString.null . view content) (withoutSuffix |> suffixWithMatch)
 
 slice :: (Int, Int) -> ByteString -> ByteString
 slice (i, len) = ByteString.take len . ByteString.drop i

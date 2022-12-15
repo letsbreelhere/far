@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes, FlexibleInstances, MultiParamTypeClasses #-}
 
 module Rendering (module Rendering) where
 
@@ -20,8 +20,10 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.ProgressBar as P
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
+import Data.Maybe (fromMaybe)
 
 newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
   deriving (Functor, Applicative, Monad, MonadReader AppState)
@@ -84,10 +86,11 @@ renderFile hasFocus selected (fname, _) = attr (str fname)
 previewPane :: RenderCtx (Widget Name)
 previewPane = do
   grepRegex <- viewing (regexFrom . editorContentL)
+  file <- viewing curFile
   let mRegex = mkRegex $ Text.unpack grepRegex
   (selectedFileName, selectedContents) <- viewing (matchedFiles . selectionL . _Just)
   selection <- case mRegex of
-    Just r -> previewHighlightedContent . textWithMatches r $ selectedContents
+    Just r -> uncurry (previewHighlightedContent file) . textWithMatches r $ selectedContents
     Nothing -> pure . str . massageForWidget . Text.unpack . decodeUtf8 $ selectedContents
   pure $
     selection &
@@ -99,16 +102,23 @@ previewPane = do
       hLimitPercent 75
 
 scrollTo :: Location -> Seq (Seq TextWithMatch) -> Seq (Seq TextWithMatch)
-scrollTo (Location (x,y)) twms = fmap (Seq.drop x) (Seq.drop y twms)
+scrollTo (Location (x,y)) twms = Seq.filter (not . BS.null . view content) . (_head . content %~ BS.drop x) <$> Seq.drop y twms
 
-previewHighlightedContent :: Seq TextWithMatch -> RenderCtx (Widget Name)
-previewHighlightedContent Seq.Empty = pure $ str " "
-previewHighlightedContent twms = do
-  curMatch <- viewing curMatchIndex
-  let broken = breakLines twms
+previewHighlightedContent :: Maybe File -> [CaptureGroup] -> Seq TextWithMatch -> RenderCtx (Widget Name)
+previewHighlightedContent _ _ Seq.Empty = pure $ str " "
+previewHighlightedContent file cgs twms = do
+  curGroupIx <- viewing curGroupIndex
+  let row = case cgs of
+              [] -> 0
+              _ -> let curMatch = NE.head . view matches $ cgs !! curGroupIx
+                       absoluteIndex = curMatch^.matchStartIndex
+                       nearestNewline = fromMaybe 0 . nearestLT absoluteIndex $ mkBinTree (maybe [] (view newlineIndices) file)
+                    in absoluteIndex - nearestNewline
+      col = 0
+      broken = scrollTo (Location (row, col)) $ breakLines twms
       previewAttr twm = case twm^.twmGroupL groupIndex of
-                          Just ci ->
-                            if ci == curMatch then attrName "selectedMatch" else attrName "match"
+                          Just gi ->
+                            if gi == curGroupIx then attrName "selectedMatch" else attrName "match"
                           _ -> mempty
       attemptDecode :: TextWithMatch -> Maybe String
       attemptDecode twm = case decodeUtf8' . view content $ twm of
@@ -136,7 +146,7 @@ breakLines = fmap removeLeadingEmpties . go Seq.empty
     go curLine (s:<|ss) =
        case firstBreak (s^.content) of
          Just (lh, lt) -> (curLine |> (s & content .~ lh)) <| go Seq.empty ((s & content .~ lt) <| ss)
-         Nothing -> go (curLine :|> s) ss
+         Nothing -> go (curLine |> s) ss
     firstBreak s = do
       i <- '\n' `BS.elemIndex` s
       pure (BS.take i s, BS.drop (i+1) s)
