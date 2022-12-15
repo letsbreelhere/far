@@ -116,4 +116,4 @@ twmGroupL getter = captureGroup . to (fmap (view getter))
 
 instance Cons (Seq a) (Seq b) a b where
   _Cons f (a:<|as) = uncurry (<|) <$> f (a, as)
-  _Cons _ Seq.Empty     = pure Seq.empty
+  _Cons _ Seq.Empty = pure Seq.empty

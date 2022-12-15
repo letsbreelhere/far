@@ -86,11 +86,10 @@ renderFile hasFocus selected (fname, _) = attr (str fname)
 previewPane :: RenderCtx (Widget Name)
 previewPane = do
   grepRegex <- viewing (regexFrom . editorContentL)
-  file <- viewing curFile
   let mRegex = mkRegex $ Text.unpack grepRegex
   (selectedFileName, selectedContents) <- viewing (matchedFiles . selectionL . _Just)
   selection <- case mRegex of
-    Just r -> uncurry (previewHighlightedContent file) . textWithMatches r $ selectedContents
+    Just r -> uncurry previewHighlightedContent . textWithMatches r $ selectedContents
     Nothing -> pure . str . massageForWidget . Text.unpack . decodeUtf8 $ selectedContents
   pure $
     selection &
@@ -104,10 +103,11 @@ previewPane = do
 scrollTo :: Location -> Seq (Seq TextWithMatch) -> Seq (Seq TextWithMatch)
 scrollTo (Location (x,y)) twms = Seq.filter (not . BS.null . view content) . (_head . content %~ BS.drop x) <$> Seq.drop y twms
 
-previewHighlightedContent :: Maybe File -> [CaptureGroup] -> Seq TextWithMatch -> RenderCtx (Widget Name)
-previewHighlightedContent _ _ Seq.Empty = pure $ str " "
-previewHighlightedContent file cgs twms = do
+previewHighlightedContent :: [CaptureGroup] -> Seq TextWithMatch -> RenderCtx (Widget Name)
+previewHighlightedContent _ Seq.Empty = pure $ str " "
+previewHighlightedContent cgs twms = do
   curGroupIx <- viewing curGroupIndex
+  file <- viewing curFile
   let row = case cgs of
               [] -> 0
               _ -> let curMatch = NE.head . view matches $ cgs !! curGroupIx
