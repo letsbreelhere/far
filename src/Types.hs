@@ -10,7 +10,6 @@ import Lens.Micro.TH (makeLenses)
 import Brick.Widgets.List (List)
 import Brick.Widgets.Edit (Editor)
 import Data.ByteString (ByteString)
-import Data.ByteString.Char8 (elemIndices)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Data.Sequence (Seq(..), (<|))
@@ -50,19 +49,15 @@ nearest = go Nothing
       | abs (target-candidate) < abs (target-cur) = Just candidate
     newBest _ cur _ = Just cur
 
-nearestLT :: (Num a, Ord a) => a -> BinTree a -> Maybe a
-nearestLT = go Nothing
-  where
-    go mAcc _ Tip = mAcc
-    go mAcc target (Branch a' l r) =
-      let mAcc' = newBest target a' mAcc
-       in case compare target a' of
-            EQ -> Just target
-            LT -> go mAcc' target l
-            GT -> go mAcc' target r
-    newBest target cur (Just candidate)
-      | candidate < cur && abs (target-candidate) < abs (target-cur) = Just candidate
-    newBest _ cur _ = Just cur
+nearestLT :: (Ord a) => a -> BinTree a -> Maybe a
+nearestLT _ Tip = Nothing
+nearestLT target (Branch x left right)
+  | x < target = case right of
+      Tip -> Just x
+      _ -> case nearestLT target right of
+        Nothing -> Just x
+        Just y -> Just y
+  | otherwise = nearestLT target left
 
 
 data File = File
