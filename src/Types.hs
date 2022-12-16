@@ -10,6 +10,7 @@ import Lens.Micro.TH (makeLenses)
 import Brick.Widgets.List (List)
 import Brick.Widgets.Edit (Editor)
 import Data.ByteString (ByteString)
+import Data.ByteString.Char8 (elemIndices)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Text (Text)
 import Data.Sequence (Seq(..), (<|))
@@ -79,7 +80,6 @@ data AppState = AppState
   { _focus :: Name
   , _files :: Vector (String, ByteString)
   , _matchedFiles :: List Name (String, ByteString)
-  , _curFile :: Maybe File
   , _curGroupIndex :: Int
   , _regexFrom :: Editor Text Name
   , _regexTo :: Editor Text Name

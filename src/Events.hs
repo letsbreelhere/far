@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PatternSynonyms, RankNTypes, FlexibleContexts #-}
 module Events (handleEvent) where
 
 import Search (mkRegex)
@@ -11,7 +11,6 @@ import Brick.Widgets.List (listElementsL, listSelectedL)
 import Control.Monad (when, guard)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Monad.State (MonadState)
-import Data.ByteString.Char8 (elemIndices)
 import Data.Foldable
 import Data.Maybe (isJust)
 import Lens.Micro
@@ -43,13 +42,12 @@ updateMatchedFiles = do
 pattern PlainKey :: V.Key -> BrickEvent n e
 pattern PlainKey c = VtyEvent (V.EvKey c [])
 
-handlerWithChanges :: (MonadState s m, Eq a) =>
-  (ev -> m ()) -> ev -> Getting a s a -> (a -> m ()) -> m ()
-handlerWithChanges handler event lens action = do
-  prev <- use lens
+monitorChange :: (MonadState s m, Eq a) => SimpleGetter s a -> (a -> a -> m ()) -> (ev -> m ()) -> ev -> m ()
+monitorChange getter onChange handler event = do
+  prev <- use getter
   handler event
-  next <- use lens
-  when (prev /= next) (action next)
+  next <- use getter
+  when (prev /= next) (onChange prev next)
 
 handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleEvent (PlainKey V.KEsc) = halt
@@ -67,16 +65,9 @@ handleEvent e = do
   case s^.focus of
     FileBrowser ->
       case e of
-        VtyEvent vtyEvent -> do
-          handlerWithChanges fileBrowserEventHandler vtyEvent (matchedFiles . selectionL) $ \nextFile ->
-            curFile .= do
-              (fName, fContents) <- nextFile
-              pure $ File fName fContents (elemIndices '\n' fContents)
+        VtyEvent vtyEvent -> fileBrowserEventHandler vtyEvent
         _ -> pure ()
-    FromInput -> do
-      -- TODO update curFile when this changes...
-      -- Also automate these checks across all events somehow
-      handlerWithChanges (zoom regexFrom . Edit.handleEditorEvent) e (regexFrom . editorContentL) $ const updateMatchedFiles
+    FromInput -> monitorChange (regexFrom . editorContentL) (\_ _ -> updateMatchedFiles) (zoom regexFrom . Edit.handleEditorEvent) e
     ToInput -> zoom regexTo $ Edit.handleEditorEvent e
     _ -> pure ()
 

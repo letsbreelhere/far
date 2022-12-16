@@ -70,7 +70,6 @@ main = do
         , _files=mempty
         , _matchedFiles=fList
         , _curGroupIndex=0
-        , _curFile=Nothing
         , _regexFrom=editorFrom
         , _regexTo=editorTo
         , _totalFiles=length fs
