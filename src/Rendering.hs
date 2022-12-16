@@ -114,8 +114,8 @@ previewHighlightedContent cgs twms = do
               [] -> 0
               _ -> let curMatch = NE.head . view matches $ cgs !! curGroupIx
                        absoluteIndex = curMatch^.matchStartIndex
-                       nearestNewline = fromMaybe absoluteIndex . nearestLT absoluteIndex $ mkBinTree (maybe [] (view newlineIndices) file)
-                    in absoluteIndex - nearestNewline
+                       nearestNewline = fromMaybe (negate 1) . nearestLT absoluteIndex $ mkBinTree (maybe [] (view newlineIndices) file)
+                    in absoluteIndex - nearestNewline - 1
       y = 0
       broken = scrollTo (Location (x, y)) $ breakLines twms
       previewAttr twm = case twm^.twmGroupL groupIndex of
