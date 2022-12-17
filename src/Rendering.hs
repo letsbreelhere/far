@@ -91,7 +91,6 @@ previewPane = do
     Nothing -> pure . str . massageForWidget . Text.unpack . decodeUtf8 $ selectedContents
   pure $
     selection &
-      showCursor Preview (Location (0,0)) &
       viewport Preview Both &
       padBottom Max &
       padRight Max &
