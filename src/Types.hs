@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, RankNTypes,
-   FlexibleInstances, MultiParamTypeClasses #-}
+   FlexibleInstances, MultiParamTypeClasses, DeriveFunctor, DeriveFoldable #-}
 
 module Types (module Types) where
 
@@ -22,8 +22,7 @@ data Name = Preview | FileBrowser | FromInput | ToInput
   deriving (Show, Ord, Eq, Enum, Bounded)
 
 data BinTree a = Tip | Branch a (BinTree a) (BinTree a)
-  deriving (Show)
-
+  deriving (Show, Functor, Foldable)
 
 data File = File
   { _fileName :: String

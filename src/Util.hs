@@ -77,7 +77,4 @@ nearestLT target (Branch x left right)
   | otherwise = nearestLT target left
 
 countLT :: (Ord a) => a -> BinTree a -> Int
-countLT _ Tip = 0
-countLT target (Branch candidate l r)
-  | candidate < target = 1 + countLT target l + countLT target r
-  | otherwise = countLT target l + countLT target r
+countLT target = sum . fmap (\candidate -> if candidate < target then 1 else 0)
