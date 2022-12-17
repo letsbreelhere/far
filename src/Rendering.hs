@@ -20,10 +20,8 @@ import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.ProgressBar as P
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
-import Data.Maybe (fromMaybe)
 
 newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
   deriving (Functor, Applicative, Monad, MonadReader AppState)
@@ -94,32 +92,21 @@ previewPane = do
   pure $
     selection &
       showCursor Preview (Location (0,0)) &
+      viewport Preview Both &
       padBottom Max &
       padRight Max &
       B.borderWithLabel (str selectedFileName) &
       padRight (Pad 1) &
       hLimitPercent 75
 
-scrollTo :: Location -> Seq (Seq TextWithMatch) -> Seq (Seq TextWithMatch)
-scrollTo (Location (x,y)) twms = dropEmptyHead . (_head . content %~ BS.drop x) <$> Seq.drop y twms
-  where dropEmptyHead (h:<|t) | BS.null (h^.content) = t
-        dropEmptyHead twms' = twms'
-
 previewHighlightedContent :: [CaptureGroup] -> Seq TextWithMatch -> RenderCtx (Widget Name)
 previewHighlightedContent _ Seq.Empty = pure $ str " "
-previewHighlightedContent cgs twms = do
-  file <- viewing curFile
+previewHighlightedContent _ twms = do
   mayCurGroupIx <- viewing curGroupIndex
-  let (x,y) = case (mayCurGroupIx, cgs) of
-              (Just curGroupIx, _:_) ->
-                let curMatch = NE.head . view matches $ cgs !! curGroupIx
-                    absoluteIndex = curMatch^.matchStartIndex
-                    tree = mkBinTree (maybe [] (view newlineIndices) file)
-                    nearestNewline = fromMaybe (negate 1) . nearestLT absoluteIndex $ tree
-                    lineIndex = countLT absoluteIndex tree
-                 in (absoluteIndex - nearestNewline - 1, lineIndex)
-              _ -> (0, 0)
-      broken = scrollTo (Location (x, y)) $ breakLines twms
+  let broken = breakLines twms
+      isMatch twm = case twm^.twmGroupL groupIndex of
+                      Just gi -> Just gi == mayCurGroupIx
+                      Nothing -> False
       previewAttr twm = case twm^.twmGroupL groupIndex of
                           Just gi ->
                             if Just gi == mayCurGroupIx then attrName "selectedMatch" else attrName "match"
@@ -131,7 +118,7 @@ previewHighlightedContent cgs twms = do
       renderTwm :: TextWithMatch -> Maybe (Widget Name)
       renderTwm twm = do
         decoded <- attemptDecode twm
-        pure . withAttr (previewAttr twm) . str . massageForWidget $ decoded
+        pure . withAttr (previewAttr twm) . (if isMatch twm then visible else id) . str . massageForWidget $ decoded
       renderLine :: [TextWithMatch] -> Maybe (Widget Name)
       renderLine [] = Just $ str " "
       renderLine twms' = fmap hBox . mapM renderTwm $ twms'
