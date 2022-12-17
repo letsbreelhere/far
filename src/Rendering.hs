@@ -108,19 +108,21 @@ scrollTo (Location (x,y)) twms = dropEmptyHead . (_head . content %~ BS.drop x) 
 previewHighlightedContent :: [CaptureGroup] -> Seq TextWithMatch -> RenderCtx (Widget Name)
 previewHighlightedContent _ Seq.Empty = pure $ str " "
 previewHighlightedContent cgs twms = do
-  curGroupIx <- viewing curGroupIndex
   file <- viewing curFile
-  let x = case cgs of
-              [] -> 0
-              _ -> let curMatch = NE.head . view matches $ cgs !! curGroupIx
-                       absoluteIndex = curMatch^.matchStartIndex
-                       nearestNewline = fromMaybe (negate 1) . nearestLT absoluteIndex $ mkBinTree (maybe [] (view newlineIndices) file)
-                    in absoluteIndex - nearestNewline - 1
+  mayCurGroupIx <- viewing curGroupIndex
+  let x = case (mayCurGroupIx, cgs) of
+              (_, []) -> 0
+              (Nothing, _) -> 0
+              (Just curGroupIx, _) ->
+                let curMatch = NE.head . view matches $ cgs !! curGroupIx
+                    absoluteIndex = curMatch^.matchStartIndex
+                    nearestNewline = fromMaybe (negate 1) . nearestLT absoluteIndex $ mkBinTree (maybe [] (view newlineIndices) file)
+                 in absoluteIndex - nearestNewline - 1
       y = 0
       broken = scrollTo (Location (x, y)) $ breakLines twms
       previewAttr twm = case twm^.twmGroupL groupIndex of
                           Just gi ->
-                            if gi == curGroupIx then attrName "selectedMatch" else attrName "match"
+                            if Just gi == mayCurGroupIx then attrName "selectedMatch" else attrName "match"
                           _ -> mempty
       attemptDecode :: TextWithMatch -> Maybe String
       attemptDecode twm = case decodeUtf8' . view content $ twm of
