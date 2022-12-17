@@ -110,15 +110,15 @@ previewHighlightedContent _ Seq.Empty = pure $ str " "
 previewHighlightedContent cgs twms = do
   file <- viewing curFile
   mayCurGroupIx <- viewing curGroupIndex
-  let x = case (mayCurGroupIx, cgs) of
-              (_, []) -> 0
-              (Nothing, _) -> 0
-              (Just curGroupIx, _) ->
+  let (x,y) = case (mayCurGroupIx, cgs) of
+              (Just curGroupIx, _:_) ->
                 let curMatch = NE.head . view matches $ cgs !! curGroupIx
                     absoluteIndex = curMatch^.matchStartIndex
-                    nearestNewline = fromMaybe (negate 1) . nearestLT absoluteIndex $ mkBinTree (maybe [] (view newlineIndices) file)
-                 in absoluteIndex - nearestNewline - 1
-      y = 0
+                    tree = mkBinTree (maybe [] (view newlineIndices) file)
+                    nearestNewline = fromMaybe (negate 1) . nearestLT absoluteIndex $ tree
+                    lineIndex = countLT absoluteIndex tree
+                 in (absoluteIndex - nearestNewline - 1, lineIndex)
+              _ -> (0, 0)
       broken = scrollTo (Location (x, y)) $ breakLines twms
       previewAttr twm = case twm^.twmGroupL groupIndex of
                           Just gi ->

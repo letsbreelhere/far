@@ -24,41 +24,6 @@ data Name = Preview | FileBrowser | FromInput | ToInput
 data BinTree a = Tip | Branch a (BinTree a) (BinTree a)
   deriving (Show)
 
-mkBinTree :: Ord a => [a] -> BinTree a
-mkBinTree [] = Tip
-mkBinTree [a] = Branch a Tip Tip
-mkBinTree as =
-  let midPoint = length as `div` 2
-      midElem = as !! midPoint
-   in Branch
-        midElem
-        (mkBinTree (take midPoint as))
-        (mkBinTree (drop (midPoint+1) as))
-
-nearest :: (Num a, Ord a) => a -> BinTree a -> Maybe a
-nearest = go Nothing
-  where
-    go mAcc _ Tip = mAcc
-    go mAcc target (Branch a' l r) =
-      let mAcc' = newBest target a' mAcc
-       in case compare target a' of
-            EQ -> Just target
-            LT -> go mAcc' target l
-            GT -> go mAcc' target r
-    newBest target cur (Just candidate)
-      | abs (target-candidate) < abs (target-cur) = Just candidate
-    newBest _ cur _ = Just cur
-
-nearestLT :: (Ord a) => a -> BinTree a -> Maybe a
-nearestLT _ Tip = Nothing
-nearestLT target (Branch x left right)
-  | x < target = case right of
-      Tip -> Just x
-      _ -> case nearestLT target right of
-        Nothing -> Just x
-        Just y -> Just y
-  | otherwise = nearestLT target left
-
 
 data File = File
   { _fileName :: String
