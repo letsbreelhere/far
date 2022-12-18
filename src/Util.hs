@@ -14,6 +14,8 @@ import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
+import Text.Regex.PCRE (Regex)
+import Search (mkRegex)
 
 filterMSeq :: (a -> IO Bool) -> Seq a -> IO (Seq a)
 filterMSeq p = foldM (\acc a -> p a >>= \b -> if b then pure (acc |> a) else pure acc) Seq.empty
@@ -42,3 +44,9 @@ curFile :: SimpleGetter AppState (Maybe File)
 curFile = to $ \s -> do
     (fName, fContents) <- s ^. matchedFiles.selectionL
     pure $ File fName fContents (elemIndices '\n' fContents)
+
+compiledRegexL :: SimpleGetter AppState (Maybe Regex)
+compiledRegexL = regexFrom .
+  editorContentL .
+  to Text.unpack .
+  to (\t -> guard (not $ null t) >> mkRegex t)

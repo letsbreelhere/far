@@ -8,11 +8,11 @@ import Util
 import Brick
 import Brick.BChan (writeBChan)
 import Brick.Widgets.List (listElementsL, listSelectedL)
-import Control.Monad (when, guard, unless)
+import Control.Monad (when, guard)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Monad.State (MonadState)
 import Data.Foldable
-import Data.Maybe (isJust, fromMaybe, isNothing)
+import Data.Maybe (isJust, fromMaybe)
 import Lens.Micro
 import Lens.Micro.Mtl
 import qualified Brick.Widgets.Edit as Edit
@@ -52,12 +52,9 @@ monitorChange getter onChange handler event = do
 
 enterReplaceMode :: EventM Name AppState ()
 enterReplaceMode = do
-  grepRegex <- use (regexFrom . editorContentL)
-  let mRegex = do
-        guard (not $ Text.null grepRegex)
-        mkRegex $ Text.unpack grepRegex
-      maybe' m a f = maybe a f m
-  maybe' mRegex (pure ()) $ \regex -> do
+  grepRegex <- use compiledRegexL
+  let maybe' m a f = maybe a f m
+  maybe' grepRegex (pure ()) $ \regex -> do
     matchedFiles.listSelectedL .= Just 0
     (_, selectedContents) <- use (matchedFiles . selectionL . _Just)
     let (_, selectionWithMatches) = textWithMatches regex selectedContents

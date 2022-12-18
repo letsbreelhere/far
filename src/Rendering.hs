@@ -2,7 +2,7 @@
 
 module Rendering (module Rendering) where
 
-import Search (textWithMatches, mkRegex)
+import Search (textWithMatches)
 import Types
 import Util
 
@@ -92,11 +92,10 @@ renderFile hasFocus selected (fname, _) = attr (str fname)
 
 previewPane :: RenderCtx (Widget Name)
 previewPane = do
-  grepRegex <- viewing (regexFrom . editorContentL)
-  let mRegex = mkRegex $ Text.unpack grepRegex
+  grepRegex <- viewing compiledRegexL
   (selectedFileName, selectedContents) <- viewing (matchedFiles . selectionL . _Just)
-  selection <- case mRegex of
-    Just r -> uncurry previewHighlightedContent . textWithMatches r $ selectedContents
+  selection <- case grepRegex of
+    Just regex -> uncurry previewHighlightedContent . textWithMatches regex $ selectedContents
     Nothing -> pure . str . massageForWidget . Text.unpack . decodeUtf8 $ selectedContents
   pure $
     selection &
