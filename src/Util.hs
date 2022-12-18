@@ -6,7 +6,6 @@ import Data.TextWithMatch
 import Types
 
 import Control.Monad.State
-import Data.ByteString.Char8 (elemIndices)
 import Data.Sequence (Seq, (|>))
 import Data.Text.Zipper (getText)
 import Data.Text (Text)
@@ -40,11 +39,6 @@ selectionL = to (fmap snd . List.listSelectedElement)
 
 editorContentL :: SimpleGetter (Edit.Editor Text n) Text
 editorContentL = Edit.editContentsL . to getText . to Text.concat
-
-curFile :: SimpleGetter AppState (Maybe File)
-curFile = to $ \s -> do
-    (fName, fContents) <- s ^. matchedFiles.selectionL
-    pure $ File fName fContents (elemIndices '\n' fContents)
 
 compiledRegexL :: SimpleGetter AppState (Maybe Regex)
 compiledRegexL = regexFrom .
