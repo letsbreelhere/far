@@ -3,50 +3,22 @@
 
 module Types (module Types) where
 
-import Lens.Micro
-import Lens.Micro.Internal
-import Lens.Micro.Extras (view)
-import Lens.Micro.TH (makeLenses)
-import Brick.Widgets.List (List)
+import Data.Zipper
+
+import Brick.BChan (BChan)
 import Brick.Widgets.Edit (Editor)
+import Brick.Widgets.List (List)
+import Control.Concurrent (ThreadId)
 import Data.ByteString (ByteString)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Text (Text)
 import Data.Sequence (Seq(..), (<|))
+import Data.Text (Text)
 import Data.Vector (Vector)
-import Brick.BChan (BChan)
-import Control.Concurrent (ThreadId)
+import Lens.Micro
+import Lens.Micro.Extras (view)
+import Lens.Micro.Internal
+import Lens.Micro.TH (makeLenses)
 import qualified Data.Sequence as Seq
-
-data Name = Preview | FileBrowser | FromInput | ToInput
-  deriving (Show, Ord, Eq, Enum, Bounded)
-
-data BinTree a = Tip | Branch a (BinTree a) (BinTree a)
-  deriving (Show, Functor, Foldable)
-
-data File = File
-  { _fileName :: String
-  , _fileContents :: ByteString
-  , _newlineIndices :: [Int]
-  }
-makeLenses ''File
-
-data Event = FilesProcessed (Seq (String, ByteString))
-           | MatchedFilesProcessed (Vector (String, ByteString))
-           | UpdateThreadId ThreadId
-
-data AppState = AppState
-  { _focus :: Name
-  , _files :: Vector (String, ByteString)
-  , _matchedFiles :: List Name (String, ByteString)
-  , _curGroupIndex :: Maybe Int
-  , _regexFrom :: Editor Text Name
-  , _regexTo :: Editor Text Name
-  , _totalFiles :: Int
-  , _eventChan :: BChan Event
-  , _matchThreadId :: Maybe ThreadId
-  }
-makeLenses ''AppState
 
 data Match = Match
   { _matchStartIndex :: Int
@@ -69,6 +41,42 @@ data TextWithMatch = TextWithMatch
   }
   deriving (Show)
 makeLenses ''TextWithMatch
+
+data Name = Preview | FileBrowser | FromInput | ToInput
+  deriving (Show, Ord, Eq, Enum, Bounded)
+
+data BinTree a = Tip | Branch a (BinTree a) (BinTree a)
+  deriving (Show, Functor, Foldable)
+
+data File = File
+  { _fileName :: String
+  , _fileContents :: ByteString
+  , _newlineIndices :: [Int]
+  }
+makeLenses ''File
+
+data Event = FilesProcessed (Seq (String, ByteString))
+           | MatchedFilesProcessed (Vector (String, ByteString))
+           | UpdateThreadId ThreadId
+
+data ReplaceState = ReplaceState
+  { _curGroupIndex :: Int
+  , _curReplaceFile :: Zipper TextWithMatch
+  }
+makeLenses ''ReplaceState
+
+data AppState = AppState
+  { _focus :: Name
+  , _files :: Vector (String, ByteString)
+  , _matchedFiles :: List Name (String, ByteString)
+  , _replaceState :: Maybe ReplaceState
+  , _regexFrom :: Editor Text Name
+  , _regexTo :: Editor Text Name
+  , _totalFiles :: Int
+  , _eventChan :: BChan Event
+  , _matchThreadId :: Maybe ThreadId
+  }
+makeLenses ''AppState
 
 twmGroupL :: Getting a CaptureGroup a -> Getting (Maybe a) TextWithMatch (Maybe a)
 twmGroupL getter = captureGroup . to (fmap (view getter))

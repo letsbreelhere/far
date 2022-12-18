@@ -1,18 +1,18 @@
 {-# LANGUAGE PatternSynonyms, RankNTypes, FlexibleContexts #-}
 module Events (handleEvent) where
 
-import Search (mkRegex)
+import Search (mkRegex, textWithMatches)
 import Types
 import Util
 
 import Brick
 import Brick.BChan (writeBChan)
 import Brick.Widgets.List (listElementsL, listSelectedL)
-import Control.Monad (when, guard)
+import Control.Monad (when, guard, unless)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Monad.State (MonadState)
 import Data.Foldable
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromMaybe, isNothing)
 import Lens.Micro
 import Lens.Micro.Mtl
 import qualified Brick.Widgets.Edit as Edit
@@ -21,6 +21,7 @@ import qualified Data.Text as Text
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Text.Regex.PCRE as Regex
+import Data.Zipper (mkZipper)
 
 sendEvent :: Event -> EventM n AppState ()
 sendEvent e = do
@@ -49,10 +50,31 @@ monitorChange getter onChange handler event = do
   next <- use getter
   when (prev /= next) (onChange prev next)
 
+enterReplaceMode :: EventM Name AppState ()
+enterReplaceMode = do
+  grepRegex <- use (regexFrom . editorContentL)
+  let mRegex = do
+        guard (not $ Text.null grepRegex)
+        mkRegex $ Text.unpack grepRegex
+      maybe' m a f = maybe a f m
+  maybe' mRegex (pure ()) $ \regex -> do
+    matchedFiles.listSelectedL .= Just 0
+    (_, selectedContents) <- use (matchedFiles . selectionL . _Just)
+    let (_, selectionWithMatches) = textWithMatches regex selectedContents
+        zipper = fromMaybe (error "Empty textWithMatches during replace mode?") (mkZipper selectionWithMatches)
+        rState =
+          ReplaceState
+            { _curGroupIndex=0
+            , _curReplaceFile=zipper
+            }
+    focus .= Preview
+    replaceState .= Just rState
+
 handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleEvent (PlainKey V.KEsc) = halt
 handleEvent (PlainKey (V.KChar '\t')) = focus %= nextName
 handleEvent (PlainKey V.KBackTab) = focus %= prevName
+handleEvent (PlainKey V.KEnter) = enterReplaceMode
 handleEvent (AppEvent (FilesProcessed fs)) = do
   files %= flip mappend (Vec.fromList (toList fs))
   updateMatchedFiles

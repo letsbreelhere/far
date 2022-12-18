@@ -13,7 +13,7 @@ import Data.Foldable (Foldable(toList))
 import Data.Sequence (Seq(..), (<|), (|>))
 import Data.Text.Encoding (decodeUtf8, decodeUtf8')
 import Lens.Micro
-import Lens.Micro.Extras (view)
+import Lens.Micro.Extras (view, preview)
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.Edit as E
@@ -101,14 +101,14 @@ previewPane = do
 previewHighlightedContent :: [CaptureGroup] -> Seq TextWithMatch -> RenderCtx (Widget Name)
 previewHighlightedContent _ Seq.Empty = pure $ str " "
 previewHighlightedContent _ twms = do
-  mayCurGroupIx <- viewing curGroupIndex
+  rState <- viewing replaceState
   let broken = breakLines twms
       isMatch twm = case twm^.twmGroupL groupIndex of
-                      Just gi -> Just gi == mayCurGroupIx
+                      Just gi -> Just gi == (rState >>= preview curGroupIndex)
                       Nothing -> False
       previewAttr twm = case twm^.twmGroupL groupIndex of
                           Just gi ->
-                            if Just gi == mayCurGroupIx then attrName "selectedMatch" else attrName "match"
+                            if Just gi == (rState >>= preview curGroupIndex) then attrName "selectedMatch" else attrName "match"
                           _ -> mempty
       attemptDecode :: TextWithMatch -> Maybe String
       attemptDecode twm = case decodeUtf8' . view content $ twm of
