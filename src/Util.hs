@@ -19,14 +19,16 @@ filterMSeq :: (a -> IO Bool) -> Seq a -> IO (Seq a)
 filterMSeq p = foldM (\acc a -> p a >>= \b -> if b then pure (acc |> a) else pure acc) Seq.empty
 
 nextName :: Name -> Name
-nextName n
-  | n < maxBound = toEnum . succ . fromEnum $ n
-  | otherwise = minBound
+nextName FileBrowser = FromInput
+nextName FromInput = ToInput
+nextName ToInput = FileBrowser
+nextName Preview = error "No nextName for Preview"
 
 prevName :: Name -> Name
-prevName n
-  | n > minBound = toEnum . pred . fromEnum $ n
-  | otherwise = maxBound
+prevName FromInput = FileBrowser
+prevName FileBrowser = ToInput
+prevName ToInput = FromInput
+prevName Preview = error "No prevName for Preview"
 
 selectionL ::
   (List.Splittable t, Traversable t, Semigroup (t e)) =>
