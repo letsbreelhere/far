@@ -2,6 +2,7 @@
 
 module Util (module Util) where
 
+import Data.TextWithMatch
 import Types
 
 import Control.Monad.State

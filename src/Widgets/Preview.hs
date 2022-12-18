@@ -1,6 +1,7 @@
 module Widgets.Preview (previewPane) where
 
 import Data.RenderCtx
+import Data.TextWithMatch
 import Types
 import Util
 

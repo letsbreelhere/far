@@ -1,6 +1,6 @@
 module Search (mkRegex, findMatches, textWithMatches) where
 
-import Types
+import Data.TextWithMatch
 
 import Data.ByteString (ByteString)
 import Data.Foldable (Foldable(toList))
