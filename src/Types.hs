@@ -11,14 +11,12 @@ import Brick.Widgets.List (List)
 import Control.Concurrent (ThreadId)
 import Data.ByteString (ByteString)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Sequence (Seq(..), (<|))
+import Data.Sequence (Seq(..))
 import Data.Text (Text)
 import Data.Vector (Vector)
 import Lens.Micro
 import Lens.Micro.Extras (view)
-import Lens.Micro.Internal
 import Lens.Micro.TH (makeLenses)
-import qualified Data.Sequence as Seq
 
 data Match = Match
   { _matchStartIndex :: Int
@@ -80,7 +78,3 @@ makeLenses ''AppState
 
 twmGroupL :: Getting a CaptureGroup a -> Getting (Maybe a) TextWithMatch (Maybe a)
 twmGroupL getter = captureGroup . to (fmap (view getter))
-
-instance Cons (Seq a) (Seq b) a b where
-  _Cons f (a:<|as) = uncurry (<|) <$> f (a, as)
-  _Cons _ Seq.Empty = pure Seq.empty
