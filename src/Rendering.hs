@@ -22,6 +22,7 @@ import qualified Brick.Widgets.ProgressBar as P
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
+import Data.Maybe (isJust)
 
 newtype RenderCtx a = RenderCtx { getRenderCtx :: Reader AppState a }
   deriving (Functor, Applicative, Monad, MonadReader AppState)
@@ -47,8 +48,16 @@ uiRoot = do
   filesPane' <- filesPane
   previewPane' <- previewPane
   progressPane' <- progressPane
+  replaceInstructions <- replaceInstructionsPane
   pure $ padAll 5 $ C.center $ B.border $
-    (progressPane' <=> filesPane' <=> inputPane') <+> previewPane'
+    (progressPane' <=> filesPane' <=> inputPane') <+> (previewPane' <=> replaceInstructions)
+
+replaceInstructionsPane :: RenderCtx (Widget Name)
+replaceInstructionsPane = do
+  inReplaceMode <- isJust <$> viewing replaceState
+  if inReplaceMode
+     then pure . withAttr (attrName "instructions") . str $ "Replace with " ++ "[new str]" ++ "? y/n/q/a"
+     else pure emptyWidget
 
 progressPane :: RenderCtx (Widget Name)
 progressPane = do

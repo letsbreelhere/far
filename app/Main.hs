@@ -35,6 +35,7 @@ mapForApp = attrMap V.defAttr
   , (attrName "focusSelectedFile", V.currentAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
   , (attrName "match", V.currentAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
   , (attrName "selectedMatch", V.currentAttr `V.withForeColor` V.yellow `V.withStyle` V.reverseVideo)
+  , (attrName "instructions", V.currentAttr `V.withStyle` V.reverseVideo)
   ]
 
 ui :: App AppState Event Name
