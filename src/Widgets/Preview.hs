@@ -7,7 +7,7 @@ import Util
 import Brick
 import Data.Foldable (Foldable(toList))
 import Data.Sequence (Seq(..), (<|), (|>))
-import Data.Text.Encoding (decodeUtf8, decodeUtf8')
+import Data.Text.Encoding (decodeUtf8')
 import Lens.Micro
 import Lens.Micro.Extras (view, preview)
 import qualified Brick.Widgets.Border as B
@@ -15,13 +15,19 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 
+errorLine :: Widget Name
+errorLine = withAttr (attrName "error") $ str "[This file contains invalid characters and will not be displayed.]"
+
 previewPane :: RenderCtx (Widget Name)
 previewPane = do
   mayTwms <- viewing textWithMatchesL
   (selectedFileName, selectedContents) <- viewing (matchedFiles . selectionL . _Just)
   selection <- case mayTwms of
     Just (cgs, twms) -> previewHighlightedContent cgs twms
-    Nothing -> pure . str . massageForWidget . Text.unpack . decodeUtf8 $ selectedContents
+    Nothing ->
+      pure $ case decodeUtf8' selectedContents of
+        Left _ -> errorLine
+        Right t -> str . massageForWidget . Text.unpack $ t
   pure $
     selection &
       viewport Preview Both &
@@ -54,9 +60,7 @@ previewHighlightedContent _ twms = do
       renderLine :: [TextWithMatch] -> Maybe (Widget Name)
       renderLine [] = Just $ str " "
       renderLine twms' = fmap hBox . mapM renderTwm $ twms'
-  pure $ case mapM (renderLine . toList) (toList broken) of
-           Just ls -> vBox ls
-           Nothing -> withAttr (attrName "error") $ str "[This file contains invalid characters and will not be displayed.]"
+  pure . maybe errorLine vBox $ mapM (renderLine . toList) (toList broken)
 
 
 breakLines :: Seq TextWithMatch -> Seq (Seq TextWithMatch)
