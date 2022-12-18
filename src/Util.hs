@@ -52,7 +52,7 @@ compiledRegexL = regexFrom .
   to Text.unpack .
   to (\t -> guard (not $ null t) >> mkRegex t)
 
-textWithMatchesL :: SimpleGetter AppState (Maybe ([CaptureGroup], Seq TextWithMatch))
+textWithMatchesL :: SimpleGetter AppState (Maybe (Seq TextWithMatch))
 textWithMatchesL = to $ \s -> do
   regex <- s ^. compiledRegexL
   (_, selectedContents) <- s ^. matchedFiles . selectionL

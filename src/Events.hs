@@ -57,7 +57,7 @@ enterReplaceMode = do
   case grepRegex of
     Nothing -> pure ()
     _ -> do
-      (_, selectionWithMatches) <- fromMaybe (error "No matches in replace mode?") <$> use textWithMatchesL
+      selectionWithMatches <- fromMaybe (error "No matches in replace mode?") <$> use textWithMatchesL
       let zipper = fromMaybe (error "Empty textWithMatches during replace mode?") (mkZipper selectionWithMatches)
           rState =
             ReplaceState

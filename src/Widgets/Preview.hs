@@ -21,10 +21,10 @@ errorLine = withAttr (attrName "error") $ str "[This file contains invalid chara
 
 previewPane :: RenderCtx (Widget Name)
 previewPane = do
-  mayTwms <- viewing textWithMatchesL
   (selectedFileName, selectedContents) <- viewing (matchedFiles . selectionL . _Just)
+  mayTwms <- viewing textWithMatchesL
   selection <- case mayTwms of
-    Just (cgs, twms) -> previewHighlightedContent cgs twms
+    Just twms -> previewHighlightedContent twms
     Nothing ->
       pure $ case decodeUtf8' selectedContents of
         Left _ -> errorLine
@@ -38,9 +38,9 @@ previewPane = do
       padRight (Pad 1) &
       hLimitPercent 75
 
-previewHighlightedContent :: [CaptureGroup] -> Seq TextWithMatch -> RenderCtx (Widget Name)
-previewHighlightedContent _ Seq.Empty = pure $ str " "
-previewHighlightedContent _ twms = do
+previewHighlightedContent :: Seq TextWithMatch -> RenderCtx (Widget Name)
+previewHighlightedContent Seq.Empty = pure $ str " "
+previewHighlightedContent twms = do
   rState <- viewing replaceState
   let broken = breakLines twms
       isMatch twm = case twm^.twmGroupL groupIndex of
