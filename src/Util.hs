@@ -15,7 +15,7 @@ import qualified Brick.Widgets.List as List
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import Text.Regex.PCRE (Regex)
-import Search (mkRegex)
+import Search (mkRegex, textWithMatches)
 
 filterMSeq :: (a -> IO Bool) -> Seq a -> IO (Seq a)
 filterMSeq p = foldM (\acc a -> p a >>= \b -> if b then pure (acc |> a) else pure acc) Seq.empty
@@ -50,3 +50,9 @@ compiledRegexL = regexFrom .
   editorContentL .
   to Text.unpack .
   to (\t -> guard (not $ null t) >> mkRegex t)
+
+textWithMatchesL :: SimpleGetter AppState (Maybe ([CaptureGroup], Seq TextWithMatch))
+textWithMatchesL = to $ \s -> do
+  regex <- s ^. compiledRegexL
+  (_, selectedContents) <- s ^. matchedFiles . selectionL
+  pure $ textWithMatches regex selectedContents

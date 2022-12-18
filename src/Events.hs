@@ -1,7 +1,7 @@
 {-# LANGUAGE PatternSynonyms, RankNTypes, FlexibleContexts #-}
 module Events (handleEvent) where
 
-import Search (mkRegex, textWithMatches)
+import Search (mkRegex)
 import Types
 import Util
 
@@ -53,19 +53,19 @@ monitorChange getter onChange handler event = do
 enterReplaceMode :: EventM Name AppState ()
 enterReplaceMode = do
   grepRegex <- use compiledRegexL
-  let maybe' m a f = maybe a f m
-  maybe' grepRegex (pure ()) $ \regex -> do
-    matchedFiles.listSelectedL .= Just 0
-    (_, selectedContents) <- use (matchedFiles . selectionL . _Just)
-    let (_, selectionWithMatches) = textWithMatches regex selectedContents
-        zipper = fromMaybe (error "Empty textWithMatches during replace mode?") (mkZipper selectionWithMatches)
-        rState =
-          ReplaceState
-            { _curGroupIndex=0
-            , _curReplaceFile=zipper
-            }
-    focus .= Preview
-    replaceState .= Just rState
+  matchedFiles.listSelectedL .= Just 0
+  case grepRegex of
+    Nothing -> pure ()
+    _ -> do
+      (_, selectionWithMatches) <- fromMaybe (error "No matches in replace mode?") <$> use textWithMatchesL
+      let zipper = fromMaybe (error "Empty textWithMatches during replace mode?") (mkZipper selectionWithMatches)
+          rState =
+            ReplaceState
+              { _curGroupIndex=0
+              , _curReplaceFile=zipper
+              }
+      focus .= Preview
+      replaceState .= Just rState
 
 handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleEvent (PlainKey V.KEsc) = halt
