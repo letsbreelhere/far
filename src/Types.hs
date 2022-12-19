@@ -18,6 +18,8 @@ import Lens.Micro
 import Lens.Micro.Extras (view)
 import Lens.Micro.TH (makeLenses)
 
+data Mode = SetupMode | ReplaceMode
+
 data Name = Preview | FileBrowser | FromInput | ToInput
   deriving (Show, Ord, Eq, Enum, Bounded)
 

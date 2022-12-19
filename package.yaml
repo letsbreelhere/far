@@ -72,6 +72,8 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - far
+    - tasty
+    - tasty-hunit
 
 default-extensions:
   - OverloadedStrings

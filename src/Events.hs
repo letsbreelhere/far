@@ -1,6 +1,7 @@
-{-# LANGUAGE PatternSynonyms, RankNTypes, FlexibleContexts #-}
+{-# LANGUAGE PatternSynonyms, RankNTypes, FlexibleContexts, LambdaCase #-}
 module Events (handleEvent) where
 
+import Data.Zipper
 import Search (mkRegex)
 import Types
 import Util
@@ -21,7 +22,7 @@ import qualified Data.Text as Text
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Text.Regex.PCRE as Regex
-import Data.Zipper (mkZipper)
+import Data.TextWithMatch (TextWithMatch(..))
 
 sendEvent :: Event -> EventM n AppState ()
 sendEvent e = do
@@ -68,27 +69,55 @@ enterReplaceMode = do
       replaceState .= Just rState
 
 handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
-handleEvent (PlainKey V.KEsc) = halt
-handleEvent (PlainKey (V.KChar '\t')) = focus %= nextName
-handleEvent (PlainKey V.KBackTab) = focus %= prevName
-handleEvent (PlainKey V.KEnter) = enterReplaceMode
-handleEvent (AppEvent (FilesProcessed fs)) = do
+handleEvent e = do
+  use modeL >>= \case
+    SetupMode -> handleSetupModeEvent e
+    ReplaceMode -> handleReplaceModeEvent e
+
+handleSetupModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
+handleSetupModeEvent (PlainKey V.KEsc) = halt
+handleSetupModeEvent (PlainKey (V.KChar '\t')) = focus %= nextName
+handleSetupModeEvent (PlainKey V.KBackTab) = focus %= prevName
+handleSetupModeEvent (PlainKey V.KEnter) = enterReplaceMode
+handleSetupModeEvent (AppEvent (FilesProcessed fs)) = do
   files %= flip mappend (Vec.fromList (toList fs))
   updateMatchedFiles
-handleEvent (AppEvent (MatchedFilesProcessed fs)) = do
+handleSetupModeEvent (AppEvent (MatchedFilesProcessed fs)) = do
   matchedFiles.listElementsL.= fs
   matchedFiles.listSelectedL.= Just 0
-
-handleEvent e = do
+handleSetupModeEvent e = do
   s <- get
   case s^.focus of
     FileBrowser ->
       case e of
-        VtyEvent vtyEvent -> fileBrowserEventHandler vtyEvent
+        VtyEvent vtyEvent -> zoom matchedFiles $ List.handleListEventVi List.handleListEvent vtyEvent
         _ -> pure ()
     FromInput -> monitorChange (regexFrom . editorContentL) (\_ _ -> updateMatchedFiles) (zoom regexFrom . Edit.handleEditorEvent) e
     ToInput -> zoom regexTo $ Edit.handleEditorEvent e
     _ -> pure ()
 
-fileBrowserEventHandler :: V.Event -> EventM Name AppState ()
-fileBrowserEventHandler e = zoom matchedFiles $ List.handleListEventVi List.handleListEvent e
+
+getReplaceState :: EventM Name AppState ReplaceState
+getReplaceState = fromMaybe (error "No replaceState while handling replace mode event") <$> use replaceState
+
+getCurReplacement :: TextWithMatch -> EventM Name AppState TextWithMatch
+getCurReplacement twm = do
+  toPattern <- use (regexTo . editorContentL)
+  pure $ TextWithMatch { _content=undefined, _captureGroup=Nothing }
+
+handleReplaceModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
+handleReplaceModeEvent (PlainKey (V.KChar 'y')) = do
+  rState <- getReplaceState
+  replacementString <- getCurReplacement (rState ^. curReplaceFile . zipCursor)
+  replaceState . _Just . curReplaceFile . zipCursor .= replacementString
+  let z = rState ^. curReplaceFile
+  case cursorNext z of
+    Just z' -> do
+      replaceState . _Just . curReplaceFile .= z'
+      replaceState . _Just . curGroupIndex += 1
+    Nothing -> undefined
+
+handleReplaceModeEvent (PlainKey (V.KChar 'n')) = pure ()
+handleReplaceModeEvent (PlainKey (V.KChar 'q')) = pure ()
+handleReplaceModeEvent (PlainKey (V.KChar 'a')) = pure ()
+handleReplaceModeEvent _ = pure ()

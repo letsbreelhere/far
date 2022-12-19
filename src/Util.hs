@@ -51,3 +51,6 @@ textWithMatchesL = to $ \s -> do
   regex <- s ^. compiledRegexL
   (_, selectedContents) <- s ^. matchedFiles . selectionL
   pure $ textWithMatches regex selectedContents
+
+modeL :: SimpleGetter AppState Mode
+modeL = replaceState . to (maybe SetupMode (const ReplaceMode))
