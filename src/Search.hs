@@ -1,4 +1,4 @@
-module Search (module Search) where
+module Search (mkRegex, textWithMatches, replaceAll) where
 
 import Data.TextWithMatch
 
@@ -60,7 +60,7 @@ pairWithContent s (maxCaptureIndex, matchCount, acc) cg = (m^.matchStartIndex+m^
                          , _captureGroup=Nothing
                          }
         nextMatch = TextWithMatch
-                      { _content=slice (m^.matchStartIndex, m^.matchLength) s
+                      { _content=m^.matchContent
                       , _captureGroup=Just cg
                       }
 
@@ -76,6 +76,11 @@ replaceAll :: ByteString
 replaceAll patternBS twms =
   let patternTwms = textWithMatches replacePatternRegex patternBS
    in BS.concat <$> mapM (replace patternTwms) (toList twms)
+
+replaceOne :: ByteString
+           -> TextWithMatch
+           -> Maybe ByteString
+replaceOne = replace . textWithMatches replacePatternRegex
 
 replace :: Seq TextWithMatch
         -- ^ The destination text, with capture placeholders of the form \1, \2, etc
