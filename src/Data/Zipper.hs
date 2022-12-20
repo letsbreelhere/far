@@ -11,7 +11,7 @@ data Zipper a = Zipper
   , _zipCursor :: a
   , _after :: Seq a
   }
-  deriving (Functor)
+  deriving (Show, Functor)
 makeLenses ''Zipper
 
 mkZipper :: Seq a -> Maybe (Zipper a)

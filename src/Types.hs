@@ -38,6 +38,7 @@ data ReplaceState = ReplaceState
   { _curGroupIndex :: Int
   , _curReplaceFile :: Zipper TextWithMatch
   }
+  deriving (Show)
 makeLenses ''ReplaceState
 
 data AppState = AppState
