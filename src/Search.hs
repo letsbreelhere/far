@@ -1,4 +1,4 @@
-module Search (mkRegex, textWithMatches, replaceAll) where
+module Search (mkRegex, textWithMatches, replaceOne, replaceAll) where
 
 import Data.TextWithMatch
 
@@ -98,8 +98,3 @@ replace patternTwms twm =
                 Just patCg ->
                   do patternNumber <- readMaybe . BS.unpack . view matchContent . NE.last . view matches $ patCg
                      view matchContent <$> L.find (\m -> m^.captureIndex == patternNumber) (cg^.matches)
-
-nthMatch :: TextWithMatch -> Int -> Maybe ByteString
-nthMatch twm i =
-  let mayMatch = find (\m -> m ^. captureIndex == i) (twm ^. captureGroup . _Just . matches . to toList)
-   in fmap (view matchContent) mayMatch

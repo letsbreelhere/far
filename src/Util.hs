@@ -8,8 +8,10 @@ import Types
 import Control.Monad.State
 import Data.Sequence (Seq, (|>))
 import Data.Text.Zipper (getText)
+import Data.Zipper (toSeq)
 import Data.Text (Text)
 import Lens.Micro
+import Lens.Micro.Extras (view)
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
 import qualified Data.Sequence as Seq
@@ -48,9 +50,13 @@ compiledRegexL = regexFrom .
 
 textWithMatchesL :: SimpleGetter AppState (Maybe (Seq TextWithMatch))
 textWithMatchesL = to $ \s -> do
-  regex <- s ^. compiledRegexL
-  (_, selectedContents) <- s ^. matchedFiles . selectionL
-  pure $ textWithMatches regex selectedContents
+  case s ^. replaceState of
+    Nothing -> do
+      regex <- s ^. compiledRegexL
+      (_, selectedContents) <- s ^. matchedFiles . selectionL
+      pure $ textWithMatches regex selectedContents
+    Just rs -> do
+      pure . toSeq . view curReplaceFile $ rs
 
 modeL :: SimpleGetter AppState Mode
 modeL = replaceState . to (maybe SetupMode (const ReplaceMode))

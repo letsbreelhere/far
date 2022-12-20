@@ -2,7 +2,7 @@
 module Events (handleEvent) where
 
 import Data.Zipper
-import Search (mkRegex)
+import Search (mkRegex, replaceOne)
 import Types
 import Util
 
@@ -14,15 +14,18 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Monad.State (MonadState)
 import Data.Foldable
 import Data.Maybe (isJust, fromMaybe)
+import Data.TextWithMatch
 import Lens.Micro
-import Lens.Micro.Mtl
+import Lens.Micro.Extras (view)
+import Lens.Micro.Mtl hiding (view)
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Text.Regex.PCRE as Regex
-import Data.TextWithMatch (TextWithMatch(..))
 
 sendEvent :: Event -> EventM n AppState ()
 sendEvent e = do
@@ -62,11 +65,15 @@ enterReplaceMode = do
       let zipper = fromMaybe (error "Empty textWithMatches during replace mode?") (mkZipper selectionWithMatches)
           rState =
             ReplaceState
-              { _curGroupIndex=0
+              { _curGroupIndex=negate 1
               , _curReplaceFile=zipper
               }
       focus .= Preview
       replaceState .= Just rState
+      found <- seekNextMatch
+      if found
+         then pure ()
+         else error "No matches when starting replace mode"
 
 handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleEvent e = do
@@ -102,22 +109,36 @@ getReplaceState = fromMaybe (error "No replaceState while handling replace mode 
 
 getCurReplacement :: TextWithMatch -> EventM Name AppState TextWithMatch
 getCurReplacement twm = do
-  toPattern <- use (regexTo . editorContentL)
-  pure $ TextWithMatch { _content=undefined, _captureGroup=Nothing }
+  toPattern <- BS.pack . Text.unpack <$> use (regexTo . editorContentL)
+  case replaceOne toPattern twm of
+    Just newContent -> pure $ TextWithMatch newContent Nothing
+    Nothing -> error "Couldn't replace pattern; there should be an error handler here"
 
 handleReplaceModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleReplaceModeEvent (PlainKey (V.KChar 'y')) = do
   rState <- getReplaceState
   replacementString <- getCurReplacement (rState ^. curReplaceFile . zipCursor)
   replaceState . _Just . curReplaceFile . zipCursor .= replacementString
+  found <- seekNextMatch
+  if found
+     then pure ()
+     else error "File done"
+
+handleReplaceModeEvent (PlainKey (V.KChar 'n')) = pure ()
+handleReplaceModeEvent (PlainKey (V.KChar 'q')) = replaceState .= Nothing
+handleReplaceModeEvent (PlainKey (V.KChar 'a')) = pure ()
+handleReplaceModeEvent _ = pure ()
+
+seekNextMatch :: EventM Name AppState Bool
+seekNextMatch = do
+  rState <- getReplaceState
   let z = rState ^. curReplaceFile
   case cursorNext z of
     Just z' -> do
       replaceState . _Just . curReplaceFile .= z'
-      replaceState . _Just . curGroupIndex += 1
-    Nothing -> undefined
-
-handleReplaceModeEvent (PlainKey (V.KChar 'n')) = pure ()
-handleReplaceModeEvent (PlainKey (V.KChar 'q')) = pure ()
-handleReplaceModeEvent (PlainKey (V.KChar 'a')) = pure ()
-handleReplaceModeEvent _ = pure ()
+      if isJust (z' ^. zipCursor . captureGroup)
+         then do
+           replaceState . _Just . curGroupIndex += 1
+           pure True
+         else seekNextMatch
+    Nothing -> pure False
