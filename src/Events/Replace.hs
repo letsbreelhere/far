@@ -4,7 +4,7 @@ module Events.Replace (handleReplaceModeEvent, setupReplaceMode) where
 import Data.Zipper (zipCursor, mkZipper, cursorNext)
 import Search (replaceOne)
 import Types
-import Util (editorContentL, compiledRegexL, textWithMatchesL)
+import Util (editorContentL, compiledRegexL, primaryTextWithMatchesL)
 
 import Brick (BrickEvent(VtyEvent), EventM)
 import Brick.Widgets.List (listSelectedL)
@@ -29,20 +29,21 @@ setupReplaceMode = do
   case grepRegex of
     Nothing -> pure ()
     _ -> do
-      replaceState .= Nothing
-      selectionWithMatches <- fromMaybe (error "All files done") <$> use textWithMatchesL
-      let zipper = fromMaybe (error "Empty textWithMatches during replace mode?") (mkZipper selectionWithMatches)
-          rState =
-            ReplaceState
-              { _curGroupIndex=negate 1
-              , _curReplaceFile=zipper
-              }
-      focus .= Preview
-      replaceState .= Just rState
-      found <- seekNextMatch
-      if found
-         then pure ()
-         else error $ "No matches when starting replace mode: " ++ show zipper
+      use primaryTextWithMatchesL >>= \case
+        Nothing -> error "All files done"
+        Just selectionWithMatches -> do
+          let zipper = fromMaybe (error "Empty textWithMatches during replace mode?") (mkZipper selectionWithMatches)
+              rState =
+                ReplaceState
+                  { _curGroupIndex=negate 1
+                  , _curReplaceFile=zipper
+                  }
+          focus .= Preview
+          replaceState .= Just rState
+          found <- seekNextMatch
+          if found
+             then pure ()
+             else error $ "No matches when starting replace mode: " ++ show zipper
 
 getReplaceState :: EventM Name AppState ReplaceState
 getReplaceState = fromMaybe (error "No replaceState while handling replace mode event") <$> use replaceState
