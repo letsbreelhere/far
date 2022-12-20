@@ -61,7 +61,7 @@ handleSetupModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleSetupModeEvent (PlainKey V.KEsc) = halt
 handleSetupModeEvent (PlainKey (V.KChar '\t')) = focus %= nextName
 handleSetupModeEvent (PlainKey V.KBackTab) = focus %= prevName
-handleSetupModeEvent (PlainKey V.KEnter) = setupReplaceMode 0
+handleSetupModeEvent (PlainKey V.KEnter) = setupReplaceMode
 handleSetupModeEvent (AppEvent (FilesProcessed fs)) = do
   files %= flip mappend (Vec.fromList (toList fs))
   updateMatchedFiles

@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PatternSynonyms, LambdaCase #-}
 module Events.Replace (handleReplaceModeEvent, setupReplaceMode) where
 
 import Data.Zipper (zipCursor, mkZipper, cursorNext)
@@ -12,7 +12,7 @@ import Control.Monad (when, void)
 import Data.Maybe (isJust, fromMaybe)
 import Data.TextWithMatch (TextWithMatch(TextWithMatch), captureGroup)
 import Lens.Micro ((^.), _Just)
-import Lens.Micro.Mtl ((+=), (.=), use)
+import Lens.Micro.Mtl ((+=), (.=), (%=), use)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Graphics.Vty as V
@@ -20,10 +20,12 @@ import qualified Graphics.Vty as V
 pattern PlainKey :: V.Key -> BrickEvent n e
 pattern PlainKey c = VtyEvent (V.EvKey c [])
 
-setupReplaceMode :: Int -> EventM Name AppState ()
-setupReplaceMode i = do
+setupReplaceMode :: EventM Name AppState ()
+setupReplaceMode = do
   grepRegex <- use compiledRegexL
-  matchedFiles.listSelectedL .= Just i
+  _ <- matchedFiles.listSelectedL %= \case
+    Nothing -> Just 0
+    Just i -> Just i
   case grepRegex of
     Nothing -> pure ()
     _ -> do
@@ -98,7 +100,6 @@ seekNextMatch = do
 
 seekNextFile :: EventM Name AppState Bool
 seekNextFile = do
-  i <- fromMaybe (error "that don't make no sense, sarge") <$> use (matchedFiles.listSelectedL)
-  matchedFiles.listSelectedL.= Just (i+1)
-  setupReplaceMode (i+1)
+  matchedFiles.listSelectedL._Just += 1
+  setupReplaceMode
   pure True
