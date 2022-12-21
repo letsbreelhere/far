@@ -3,7 +3,7 @@ module Search (mkRegex, textWithMatches, replaceOne, replaceAll) where
 import Data.TextWithMatch
 
 import Data.ByteString (ByteString)
-import Data.Foldable (Foldable(toList), find)
+import Data.Foldable (Foldable(toList))
 import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty(..), nonEmpty)
 import Data.Maybe (mapMaybe)
