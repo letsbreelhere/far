@@ -66,7 +66,6 @@ setupReplaceMode = do
               }
       (found, rState') <- runReplaceEvent rState seekCurOrNextMatch
       unless found $ error "No matches when starting replace mode"
-      replaceState .= rState'
       pure rState'
 
 getCurReplacement :: TextWithMatch -> ReplaceEvent TextWithMatch
