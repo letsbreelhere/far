@@ -55,7 +55,9 @@ handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleEvent e = do
   use replaceState >>= \case
     Nothing -> handleSetupModeEvent e
-    Just rState -> runReplaceEvent rState $ handleReplaceModeEvent e
+    Just rState -> do
+      (_, rState') <- runReplaceEvent rState $ handleReplaceModeEvent e
+      replaceState .= Just rState'
 
 handleSetupModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleSetupModeEvent (PlainKey V.KEsc) = halt

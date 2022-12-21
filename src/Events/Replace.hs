@@ -24,11 +24,8 @@ import Control.Monad.State (StateT(..), runStateT, MonadState, get, put)
 newtype ReplaceEvent a = ReplaceEvent (StateT ReplaceState (EventM Name AppState) a)
   deriving (Functor, Applicative, Monad, MonadState ReplaceState, MonadIO)
 
-runReplaceEvent :: ReplaceState -> ReplaceEvent a -> EventM Name AppState a
-runReplaceEvent rState (ReplaceEvent m) = do
-  (a, rState') <- runStateT m rState
-  replaceState .= Just rState'
-  pure a
+runReplaceEvent :: ReplaceState -> ReplaceEvent a -> EventM Name AppState (a, ReplaceState)
+runReplaceEvent rState (ReplaceEvent m) = runStateT m rState
 
 -- Not entirely safe: if this modifies the replace state within the AppState,
 -- things can get out of sync in a probably-error-prone way here.
@@ -59,13 +56,10 @@ setupReplaceMode = do
               , _curReplaceFile=zipper
               , _curFilename=fname
               }
-      replaceState .= Just rState
-      found <- runReplaceEvent rState seekNextMatch
+      (found, rState') <- runReplaceEvent rState seekNextMatch
       unless found $ error "No matches when starting replace mode"
-      pure (Just rState)
-
-getReplaceState :: ReplaceEvent ReplaceState
-getReplaceState = get
+      replaceState .= Just rState'
+      pure (Just rState')
 
 getCurReplacement :: TextWithMatch -> ReplaceEvent TextWithMatch
 getCurReplacement twm = withApp $ do
@@ -74,15 +68,16 @@ getCurReplacement twm = withApp $ do
     Just newContent -> pure $ TextWithMatch newContent Nothing
     Nothing -> error "Couldn't replace pattern; there should be an error handler here"
 
-replaceCurrentMatch :: ReplaceState -> ReplaceEvent Bool
-replaceCurrentMatch rState = do
+replaceCurrentMatch :: ReplaceEvent Bool
+replaceCurrentMatch = do
+  rState <- get
   replacementString <- getCurReplacement (rState ^. curReplaceFile . zipCursor)
   curReplaceFile . zipCursor .= replacementString
   seekNextMatch
 
 handleReplaceModeEvent :: BrickEvent Name Event -> ReplaceEvent ()
 handleReplaceModeEvent (PlainKey (V.KChar 'y')) = do
-  foundNext <- replaceCurrentMatch =<< getReplaceState
+  foundNext <- replaceCurrentMatch
   unless foundNext (void writeAndSeekNextFile)
 
 handleReplaceModeEvent (PlainKey (V.KChar 'n')) = do
@@ -91,7 +86,7 @@ handleReplaceModeEvent (PlainKey (V.KChar 'n')) = do
      then pure ()
      else void writeAndSeekNextFile
 handleReplaceModeEvent (PlainKey (V.KChar 'Y')) = do
-  repeatWhile (replaceCurrentMatch =<< getReplaceState)
+  repeatWhile replaceCurrentMatch
   void writeAndSeekNextFile
 handleReplaceModeEvent (PlainKey (V.KChar 'N')) = void writeAndSeekNextFile
 handleReplaceModeEvent (PlainKey (V.KChar 'q')) = withApp $ replaceState .= Nothing
