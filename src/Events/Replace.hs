@@ -1,18 +1,20 @@
 {-# LANGUAGE PatternSynonyms, LambdaCase #-}
 module Events.Replace (handleReplaceModeEvent, setupReplaceMode) where
 
-import Data.Zipper (zipCursor, mkZipper, cursorNext)
+import Data.Zipper
 import Search (replaceOne)
 import Types
-import Util (editorContentL, primaryTextWithMatchesL)
+import Util
 
 import Brick (BrickEvent(VtyEvent), EventM)
 import Brick.Widgets.List (listSelectedL)
 import Control.Monad (when, unless, void)
+import Control.Monad.IO.Class (MonadIO(liftIO))
+import Data.Foldable (Foldable(toList))
 import Data.Maybe (isJust, fromMaybe)
-import Data.TextWithMatch (TextWithMatch(TextWithMatch), captureGroup)
+import Data.TextWithMatch (TextWithMatch(TextWithMatch), content, captureGroup)
 import Lens.Micro ((^.), _Just)
-import Lens.Micro.Mtl ((+=), (.=), (%=), use)
+import Lens.Micro.Mtl
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Graphics.Vty as V
@@ -106,6 +108,12 @@ seekNextMatch = do
 
 writeAndSeekNextFile :: EventM Name AppState Bool
 writeAndSeekNextFile = do
+  use (matchedFiles.selectionL) >>= \case
+    Nothing -> error "this should not happen"
+    Just (fname, _) -> do
+      cattedReplacments <- BS.concat . map (view content) . toList . toSeq . view curReplaceFile <$> getReplaceState
+      liftIO $ BS.writeFile fname cattedReplacments
+      pure ()
   matchedFiles.listSelectedL._Just += 1
   setupReplaceMode
   pure True
