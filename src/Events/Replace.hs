@@ -33,8 +33,6 @@ runReplaceEvent rState (ReplaceEvent m) = do
   (a, (s, q)) <- runStateT m (rState, False)
   pure (a, if q then Nothing else Just s)
 
--- Not entirely safe: if this modifies the replace state within the AppState,
--- things can get out of sync in a probably-error-prone way here.
 withApp :: EventM Name AppState a -> ReplaceEvent a
 withApp e = ReplaceEvent . StateT $ \(rState, done) -> do
   a <- e
