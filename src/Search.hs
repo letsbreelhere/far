@@ -67,34 +67,35 @@ pairWithContent s (maxCaptureIndex, matchCount, acc) cg = (m^.matchStartIndex+m^
 replacePatternRegex :: Regex
 replacePatternRegex = Regex.makeRegex ("\\\\(\\d+)" :: String)
 
-concatContents :: Seq TextWithMatch -> ByteString
-concatContents = BS.concat . toList . fmap (view content)
-
 replaceAll :: ByteString
            -> Seq TextWithMatch
-           -> Maybe ByteString
+           -> Either String ByteString
 replaceAll patternBS twms =
   let patternTwms = textWithMatches replacePatternRegex patternBS
    in BS.concat <$> mapM (replace patternTwms) (toList twms)
 
 replaceOne :: ByteString
            -> TextWithMatch
-           -> Maybe ByteString
+           -> Either String ByteString
 replaceOne = replace . textWithMatches replacePatternRegex
 
 replace :: Seq TextWithMatch
         -- ^ The destination text, with capture placeholders of the form \1, \2, etc
         -> TextWithMatch
         -- ^ One piece of the source text, with or without matches
-        -> Maybe ByteString
+        -> Either String ByteString
         -- ^ The destination text with its placeholders replaced
 replace patternTwms twm =
   case twm^.captureGroup of
-    Nothing -> Just (twm^.content)
+    Nothing -> Right (twm^.content)
     Just cg -> fmap BS.concat . sequence . toList $ fmap replaceCaptureGroup patternTwms
       where replaceCaptureGroup patTwm =
               case patTwm^.captureGroup of
-                Nothing -> Just (patTwm^.content)
-                Just patCg ->
-                  do patternNumber <- readMaybe . BS.unpack . view matchContent . NE.last . view matches $ patCg
-                     view matchContent <$> L.find (\m -> m^.captureIndex == patternNumber) (cg^.matches)
+                Nothing -> Right (patTwm^.content)
+                Just patCg -> do
+                  let patternNumberString = BS.unpack . view matchContent . NE.last . view matches $ patCg
+                  patternNumber <- maybeToEither ("Couldn't parse replace pattern \\" ++ patternNumberString) . readMaybe $ patternNumberString
+                  view matchContent <$> maybeToEither ("Capture group \\" ++ patternNumberString ++ " not found") (L.find (\m -> m^.captureIndex == patternNumber) (cg^.matches))
+
+maybeToEither :: l -> Maybe r -> Either l r
+maybeToEither l = maybe (Left l) Right

@@ -7,6 +7,8 @@ import Types
 
 import Brick(BrickEvent(..))
 import Control.Monad.State
+import Data.ByteString (ByteString)
+import Data.Foldable (toList)
 import Data.Sequence (Seq, (|>))
 import Data.Text (Text)
 import Data.Text.Zipper (getText)
@@ -17,6 +19,7 @@ import Search (mkRegex, textWithMatches)
 import Text.Regex.PCRE (Regex)
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import qualified Graphics.Vty as V
@@ -61,3 +64,6 @@ primaryTextWithMatchesL = to $ \s -> do
 
 textWithMatchesL :: SimpleGetter AppState (Maybe (Seq TextWithMatch))
 textWithMatchesL = to $ \s -> maybe (fmap snd $ s ^. primaryTextWithMatchesL) (pure . toSeq . view curReplaceFile) (s ^. replaceState)
+
+concatContents :: Seq TextWithMatch -> ByteString
+concatContents = BS.concat . toList . fmap (view content)

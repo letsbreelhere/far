@@ -11,9 +11,8 @@ import Brick (BrickEvent, EventM)
 import Brick.Widgets.List (listSelectedL)
 import Control.Monad (when, unless, void)
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Data.Foldable (Foldable(toList))
 import Data.Maybe (fromMaybe, isJust)
-import Data.TextWithMatch (TextWithMatch(TextWithMatch), content, captureGroup)
+import Data.TextWithMatch (TextWithMatch(TextWithMatch), captureGroup)
 import Lens.Micro ((^.), _Just)
 import Lens.Micro.Mtl
 import qualified Data.ByteString.Char8 as BS
@@ -70,8 +69,8 @@ getCurReplacement :: TextWithMatch -> ReplaceEvent TextWithMatch
 getCurReplacement twm = withApp $ do
   toPattern <- BS.pack . Text.unpack <$> use (regexTo . editorContentL)
   case replaceOne toPattern twm of
-    Just newContent -> pure $ TextWithMatch newContent Nothing
-    Nothing -> error "Couldn't replace pattern; there should be an error handler here"
+    Right newContent -> pure $ TextWithMatch newContent Nothing
+    Left err -> error err
 
 replaceCurrentMatch :: ReplaceEvent Bool
 replaceCurrentMatch = do
@@ -125,7 +124,7 @@ seekCurOrNextMatch = do
 writeAndSeekNextFile :: ReplaceEvent Bool
 writeAndSeekNextFile = do
   fname <- use curFilename
-  cattedReplacements <- BS.concat . map (view content) . toList . toSeq <$> use curReplaceFile
+  cattedReplacements <- concatContents . toSeq <$> use curReplaceFile
   liftIO $ BS.writeFile fname cattedReplacements
   mState <- withApp $ do
     matchedFiles.listSelectedL._Just += 1
