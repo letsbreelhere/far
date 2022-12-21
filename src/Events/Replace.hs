@@ -8,7 +8,7 @@ import Util (editorContentL, primaryTextWithMatchesL)
 
 import Brick (BrickEvent(VtyEvent), EventM)
 import Brick.Widgets.List (listSelectedL)
-import Control.Monad (unless, void)
+import Control.Monad (when, unless, void)
 import Data.Maybe (isJust, fromMaybe)
 import Data.TextWithMatch (TextWithMatch(TextWithMatch), captureGroup)
 import Lens.Micro ((^.), _Just)
@@ -16,6 +16,14 @@ import Lens.Micro.Mtl ((+=), (.=), (%=), use)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Graphics.Vty as V
+
+{-
+   TODO: Make invalid states unrepresentable. Rather than the standard `EventM
+   AppState Name a`, these values should be in a type that, e.g., knows from
+   its state that there is a current matchedFile selection, and a valid
+   replacement regex. This should help the `case`ing currently happening all
+   over the place here.
+-}
 
 pattern PlainKey :: V.Key -> BrickEvent n e
 pattern PlainKey c = VtyEvent (V.EvKey c [])
@@ -63,17 +71,17 @@ replaceCurrentMatch rState = do
 handleReplaceModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleReplaceModeEvent (PlainKey (V.KChar 'y')) = do
   foundNext <- replaceCurrentMatch =<< getReplaceState
-  unless foundNext (void seekNextFile)
+  unless foundNext (void writeAndSeekNextFile)
 
 handleReplaceModeEvent (PlainKey (V.KChar 'n')) = do
   found <- seekNextMatch
   if found
      then pure ()
-     else void seekNextFile
+     else void writeAndSeekNextFile
 handleReplaceModeEvent (PlainKey (V.KChar 'Y')) = do
   repeatWhile (replaceCurrentMatch =<< getReplaceState)
-  void seekNextFile
-handleReplaceModeEvent (PlainKey (V.KChar 'N')) = void seekNextFile
+  void writeAndSeekNextFile
+handleReplaceModeEvent (PlainKey (V.KChar 'N')) = void writeAndSeekNextFile
 handleReplaceModeEvent (PlainKey (V.KChar 'q')) = replaceState .= Nothing
 handleReplaceModeEvent _ = pure ()
 
@@ -96,8 +104,8 @@ seekNextMatch = do
          else seekNextMatch
     Nothing -> pure False
 
-seekNextFile :: EventM Name AppState Bool
-seekNextFile = do
+writeAndSeekNextFile :: EventM Name AppState Bool
+writeAndSeekNextFile = do
   matchedFiles.listSelectedL._Just += 1
   setupReplaceMode
   pure True
