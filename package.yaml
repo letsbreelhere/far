@@ -52,7 +52,7 @@ library:
   source-dirs: src
 
 executables:
-  far-exe:
+  far:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
