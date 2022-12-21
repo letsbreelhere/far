@@ -10,7 +10,7 @@ import Brick
     ( BrickEvent(VtyEvent, AppEvent), EventM, zoom, get, halt )
 import Brick.BChan (writeBChan)
 import Brick.Widgets.List (listElementsL, listSelectedL)
-import Control.Monad (when, guard)
+import Control.Monad (when, guard, void)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Monad.State (MonadState)
 import Data.Foldable ( Foldable(toList) )
@@ -61,7 +61,7 @@ handleSetupModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleSetupModeEvent (PlainKey V.KEsc) = halt
 handleSetupModeEvent (PlainKey (V.KChar '\t')) = focus %= nextName
 handleSetupModeEvent (PlainKey V.KBackTab) = focus %= prevName
-handleSetupModeEvent (PlainKey V.KEnter) = setupReplaceMode
+handleSetupModeEvent (PlainKey V.KEnter) = void setupReplaceMode
 handleSetupModeEvent (AppEvent (FilesProcessed fs)) = do
   files %= flip mappend (Vec.fromList (toList fs))
   updateMatchedFiles
