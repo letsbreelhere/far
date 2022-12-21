@@ -56,7 +56,7 @@ setupReplaceMode = do
               , _curReplaceFile=zipper
               , _curFilename=fname
               }
-      (found, rState') <- runReplaceEvent rState seekNextMatch'
+      (found, rState') <- runReplaceEvent rState seekNextMatch
       unless found $ error "No matches when starting replace mode"
       replaceState .= Just rState'
       pure (Just rState')
@@ -81,7 +81,7 @@ handleReplaceModeEvent (PlainKey (V.KChar 'y')) = do
   unless foundNext (void writeAndSeekNextFile)
 
 handleReplaceModeEvent (PlainKey (V.KChar 'n')) = do
-  found <- seekNextMatch'
+  found <- seekNextMatch
   if found
      then pure ()
      else void writeAndSeekNextFile
@@ -100,8 +100,8 @@ repeatWhile mb = do
 onMatch :: Zipper TextWithMatch -> Bool
 onMatch z = isJust (z ^. zipCursor . captureGroup)
 
-seekNextMatch' :: ReplaceEvent Bool
-seekNextMatch' = do
+seekNextMatch :: ReplaceEvent Bool
+seekNextMatch = do
   z <- use curReplaceFile
   case cursorNext z of
     Nothing -> pure False
@@ -111,21 +111,16 @@ seekNextMatch' = do
         then do
           curGroupIndex += 1
           pure True
-        else seekNextMatch
+        else seekCurOrNextMatch
 
-seekNextMatch :: ReplaceEvent Bool
-seekNextMatch = do
+seekCurOrNextMatch :: ReplaceEvent Bool
+seekCurOrNextMatch = do
   z <- use curReplaceFile
   if onMatch z
      then do
        curGroupIndex += 1
        pure True
-     else do
-      case cursorNext z of
-        Nothing -> pure False
-        Just z' -> do
-          curReplaceFile .= z'
-          seekNextMatch
+     else seekNextMatch
 
 writeAndSeekNextFile :: ReplaceEvent Bool
 writeAndSeekNextFile = do
