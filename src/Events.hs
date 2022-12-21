@@ -1,10 +1,10 @@
 {-# LANGUAGE PatternSynonyms, RankNTypes, FlexibleContexts, LambdaCase #-}
 module Events (handleEvent) where
 
-import Events.Replace (handleReplaceModeEvent, setupReplaceMode)
+import Events.Replace (handleReplaceModeEvent, setupReplaceMode, runReplaceEvent)
 import Search (mkRegex)
 import Types
-import Util ( nextName, prevName, editorContentL, modeL )
+import Util ( nextName, prevName, editorContentL )
 
 import Brick
     ( BrickEvent(VtyEvent, AppEvent), EventM, zoom, get, halt )
@@ -53,9 +53,9 @@ monitorChange getter onChange handler event = do
 
 handleEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleEvent e = do
-  use modeL >>= \case
-    SetupMode -> handleSetupModeEvent e
-    ReplaceMode -> handleReplaceModeEvent e
+  use replaceState >>= \case
+    Nothing -> handleSetupModeEvent e
+    Just rState -> runReplaceEvent rState $ handleReplaceModeEvent e
 
 handleSetupModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleSetupModeEvent (PlainKey V.KEsc) = halt

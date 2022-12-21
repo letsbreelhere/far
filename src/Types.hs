@@ -18,8 +18,6 @@ import Lens.Micro
 import Lens.Micro.Extras (view)
 import Lens.Micro.TH (makeLenses)
 
-data Mode = SetupMode | ReplaceMode
-
 data Name = Preview | FileBrowser | FromInput | ToInput
   deriving (Show, Ord, Eq, Enum, Bounded)
 
@@ -37,6 +35,7 @@ data Event = FilesProcessed (Seq (String, ByteString))
 data ReplaceState = ReplaceState
   { _curGroupIndex :: Int
   , _curReplaceFile :: Zipper TextWithMatch
+  , _curFilename :: String
   }
   deriving (Show)
 makeLenses ''ReplaceState

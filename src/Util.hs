@@ -48,14 +48,11 @@ compiledRegexL = regexFrom .
   to Text.unpack .
   to (\t -> guard (not $ null t) >> mkRegex t)
 
-primaryTextWithMatchesL :: SimpleGetter AppState (Maybe (Seq TextWithMatch))
+primaryTextWithMatchesL :: SimpleGetter AppState (Maybe (String, Seq TextWithMatch))
 primaryTextWithMatchesL = to $ \s -> do
   regex <- s ^. compiledRegexL
-  (_, selectedContents) <- s ^. matchedFiles . selectionL
-  pure $ textWithMatches regex selectedContents
+  (fname, selectedContents) <- s ^. matchedFiles . selectionL
+  pure (fname, textWithMatches regex selectedContents)
 
 textWithMatchesL :: SimpleGetter AppState (Maybe (Seq TextWithMatch))
-textWithMatchesL = to $ \s -> maybe (s ^. primaryTextWithMatchesL) (pure . toSeq . view curReplaceFile) (s ^. replaceState)
-
-modeL :: SimpleGetter AppState Mode
-modeL = replaceState . to (maybe SetupMode (const ReplaceMode))
+textWithMatchesL = to $ \s -> maybe (fmap snd $ s ^. primaryTextWithMatchesL) (pure . toSeq . view curReplaceFile) (s ^. replaceState)
