@@ -31,7 +31,7 @@ replaceInstructionsPane :: RenderCtx (Widget Name)
 replaceInstructionsPane = do
   inReplaceMode <- isJust <$> viewing replaceState
   if inReplaceMode
-     then pure . withAttr (attrName "instructions") . str $ "Replace with " ++ "[new str]" ++ "? y/n/Y/N/A/q"
+     then pure . withAttr (attrName "instructions") . str $ "Replace with " ++ "[new str]" ++ "? y/n/Y/N/q"
      else pure emptyWidget
 
 progressPane :: RenderCtx (Widget Name)
