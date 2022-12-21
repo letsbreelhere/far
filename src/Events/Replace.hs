@@ -12,7 +12,7 @@ import Brick.Widgets.List (listSelectedL)
 import Control.Monad (when, unless, void)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Data.Foldable (Foldable(toList))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.TextWithMatch (TextWithMatch(TextWithMatch), content, captureGroup)
 import Lens.Micro ((^.))
 import Lens.Micro.Mtl
@@ -56,7 +56,7 @@ setupReplaceMode = do
               , _curReplaceFile=zipper
               , _curFilename=fname
               }
-      (found, rState') <- runReplaceEvent rState seekNextMatch
+      (found, rState') <- runReplaceEvent rState seekNextMatch'
       unless found $ error "No matches when starting replace mode"
       replaceState .= Just rState'
       pure (Just rState')
@@ -81,7 +81,7 @@ handleReplaceModeEvent (PlainKey (V.KChar 'y')) = do
   unless foundNext (void writeAndSeekNextFile)
 
 handleReplaceModeEvent (PlainKey (V.KChar 'n')) = do
-  found <- seekNextMatch
+  found <- seekNextMatch'
   if found
      then pure ()
      else void writeAndSeekNextFile
@@ -97,21 +97,35 @@ repeatWhile mb = do
   b <- mb
   when b (repeatWhile mb)
 
+onMatch :: Zipper TextWithMatch -> Bool
+onMatch z = isJust (z ^. zipCursor . captureGroup)
+
+seekNextMatch' :: ReplaceEvent Bool
+seekNextMatch' = do
+  z <- use curReplaceFile
+  case cursorNext z of
+    Nothing -> pure False
+    Just z' -> do
+      curReplaceFile .= z'
+      if onMatch z
+        then do
+          curGroupIndex += 1
+          pure True
+        else seekNextMatch
+
 seekNextMatch :: ReplaceEvent Bool
 seekNextMatch = do
   z <- use curReplaceFile
-  case z ^. zipCursor . captureGroup of
-    Just _ -> pure True
-    Nothing ->
+  if onMatch z
+     then do
+       curGroupIndex += 1
+       pure True
+     else do
       case cursorNext z of
+        Nothing -> pure False
         Just z' -> do
           curReplaceFile .= z'
-          case z' ^. zipCursor . captureGroup of
-            Just _ -> do
-              curGroupIndex += 1
-              pure True
-            Nothing -> seekNextMatch
-        Nothing -> pure False
+          seekNextMatch
 
 writeAndSeekNextFile :: ReplaceEvent Bool
 writeAndSeekNextFile = do
