@@ -14,7 +14,7 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 import Data.Foldable (Foldable(toList))
 import Data.Maybe (fromMaybe, isJust)
 import Data.TextWithMatch (TextWithMatch(TextWithMatch), content, captureGroup)
-import Lens.Micro ((^.))
+import Lens.Micro ((^.), _Just)
 import Lens.Micro.Mtl
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
@@ -128,11 +128,9 @@ writeAndSeekNextFile :: ReplaceEvent Bool
 writeAndSeekNextFile = do
   fname <- use curFilename
   cattedReplacements <- BS.concat . map (view content) . toList . toSeq <$> use curReplaceFile
+  liftIO $ BS.writeFile fname cattedReplacements
   mState <- withApp $ do
-    liftIO $ BS.writeFile fname cattedReplacements
-    use (matchedFiles.listSelectedL) >>= \case
-      Just i -> matchedFiles.listSelectedL .= Just (i+1)
-      Nothing -> error "No current file"
+    matchedFiles.listSelectedL._Just += 1
     setupReplaceMode
   case mState of
     Just rState -> put rState
