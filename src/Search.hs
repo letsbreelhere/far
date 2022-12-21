@@ -6,7 +6,6 @@ import Data.ByteString (ByteString)
 import Data.Foldable (Foldable(toList))
 import Data.List (foldl')
 import Data.List.NonEmpty (NonEmpty(..), nonEmpty)
-import Data.Maybe (mapMaybe)
 import Data.Sequence (Seq(..), (|>))
 import Lens.Micro
 import Lens.Micro.Extras (view)
@@ -41,7 +40,7 @@ textWithMatches r s =
    in if null cgs
         then Seq.singleton (TextWithMatch s Nothing)
         else
-          let (_, _, withoutSuffix) = foldl' (pairWithContent s) (0, 0, Seq.empty) cgs
+          let (_, withoutSuffix) = foldl' (pairWithContent s) (0, Seq.empty) cgs
               lastMatchEnds = matchEnds (NE.head . view matches $ last cgs)
               suffix = slice (lastMatchEnds, ByteString.length s - lastMatchEnds) s
               suffixWithMatch = TextWithMatch suffix Nothing
@@ -53,8 +52,8 @@ slice (i, len) = ByteString.take len . ByteString.drop i
 matchEnds :: Match -> Int
 matchEnds m = (m^.matchStartIndex) + (m^.matchLength)
 
-pairWithContent :: ByteString -> (Int, Int, Seq TextWithMatch) -> CaptureGroup -> (Int, Int, Seq TextWithMatch)
-pairWithContent s (maxCaptureIndex, matchCount, acc) cg = (m^.matchStartIndex+m^.matchLength, matchCount+1, acc |> nextNonMatch |> nextMatch)
+pairWithContent :: ByteString -> (Int, Seq TextWithMatch) -> CaptureGroup -> (Int, Seq TextWithMatch)
+pairWithContent s (maxCaptureIndex, acc) cg = (m^.matchStartIndex+m^.matchLength, acc |> nextNonMatch |> nextMatch)
   where m:|_ = cg^.matches
         nextNonMatch = TextWithMatch
                          { _content=slice (maxCaptureIndex, (m^.matchStartIndex) - maxCaptureIndex) s
