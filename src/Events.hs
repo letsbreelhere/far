@@ -4,7 +4,7 @@ module Events (handleEvent) where
 import Events.Replace (handleReplaceModeEvent, setupReplaceMode, runReplaceEvent)
 import Search (mkRegex)
 import Types
-import Util ( nextName, prevName, editorContentL )
+import Util ( nextName, prevName, editorContentL, pattern PlainKey )
 
 import Brick
     ( BrickEvent(VtyEvent, AppEvent), EventM, zoom, get, halt )
@@ -40,9 +40,6 @@ updateMatchedFiles = do
         Just r -> Vec.filter (\(_, c) -> isJust $ Regex.matchOnce r c) allFiles
         Nothing -> allFiles
   sendEvent (MatchedFilesProcessed matchedFiles')
-
-pattern PlainKey :: V.Key -> BrickEvent n e
-pattern PlainKey c = VtyEvent (V.EvKey c [])
 
 monitorChange :: (MonadState s m, Eq a) => SimpleGetter s a -> (a -> a -> m ()) -> (ev -> m ()) -> ev -> m ()
 monitorChange getter onChange handler event = do

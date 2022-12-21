@@ -1,23 +1,28 @@
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE PatternSynonyms, RankNTypes #-}
 
 module Util (module Util) where
 
 import Data.TextWithMatch
 import Types
 
+import Brick(BrickEvent(..))
 import Control.Monad.State
 import Data.Sequence (Seq, (|>))
+import Data.Text (Text)
 import Data.Text.Zipper (getText)
 import Data.Zipper (toSeq)
-import Data.Text (Text)
 import Lens.Micro
 import Lens.Micro.Extras (view)
+import Search (mkRegex, textWithMatches)
+import Text.Regex.PCRE (Regex)
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
-import Text.Regex.PCRE (Regex)
-import Search (mkRegex, textWithMatches)
+import qualified Graphics.Vty as V
+
+pattern PlainKey :: V.Key -> BrickEvent n e
+pattern PlainKey c = VtyEvent (V.EvKey c [])
 
 filterMSeq :: (a -> IO Bool) -> Seq a -> IO (Seq a)
 filterMSeq p = foldM (\acc a -> p a >>= \b -> if b then pure (acc |> a) else pure acc) Seq.empty

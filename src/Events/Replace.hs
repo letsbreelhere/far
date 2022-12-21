@@ -1,5 +1,5 @@
-{-# LANGUAGE PatternSynonyms, LambdaCase, DeriveFunctor,
-   GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
+{-# LANGUAGE LambdaCase, DeriveFunctor, GeneralizedNewtypeDeriving,
+   MultiParamTypeClasses #-}
 module Events.Replace (handleReplaceModeEvent, setupReplaceMode, runReplaceEvent) where
 
 import Data.Zipper
@@ -7,7 +7,7 @@ import Search (replaceOne)
 import Types
 import Util
 
-import Brick (BrickEvent(VtyEvent), EventM)
+import Brick (BrickEvent, EventM)
 import Brick.Widgets.List (listSelectedL)
 import Control.Monad (when, unless, void)
 import Control.Monad.IO.Class (MonadIO(liftIO))
@@ -44,9 +44,6 @@ quit :: ReplaceEvent ()
 quit = do
   withApp $ focus .= FromInput
   ReplaceEvent $ state (\(s,_) -> ((), (s, True)))
-
-pattern PlainKey :: V.Key -> BrickEvent n e
-pattern PlainKey c = VtyEvent (V.EvKey c [])
 
 setupReplaceMode :: EventM Name AppState (Maybe ReplaceState)
 setupReplaceMode = do
