@@ -1,5 +1,5 @@
 {-# LANGUAGE PatternSynonyms, LambdaCase, DeriveFunctor,
-   GeneralizedNewtypeDeriving #-}
+   GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
 module Events.Replace (handleReplaceModeEvent, setupReplaceMode, runReplaceEvent) where
 
 import Data.Zipper
@@ -19,20 +19,31 @@ import Lens.Micro.Mtl
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Graphics.Vty as V
-import Control.Monad.State (StateT(..), runStateT, MonadState, get, put)
+import Control.Monad.State (StateT(..), runStateT, MonadState, state, get, put)
 
-newtype ReplaceEvent a = ReplaceEvent (StateT ReplaceState (EventM Name AppState) a)
-  deriving (Functor, Applicative, Monad, MonadState ReplaceState, MonadIO)
+newtype ReplaceEvent a = ReplaceEvent (StateT (ReplaceState, Bool) (EventM Name AppState) a)
+  deriving (Functor, Applicative, Monad, MonadIO)
 
-runReplaceEvent :: ReplaceState -> ReplaceEvent a -> EventM Name AppState (a, ReplaceState)
-runReplaceEvent rState (ReplaceEvent m) = runStateT m rState
+instance (MonadState ReplaceState) ReplaceEvent where
+  get = ReplaceEvent $ state (\(s, b) -> (s, (s, b)))
+  put s = ReplaceEvent $ state (\(_, b) -> ((), (s, b)))
+
+runReplaceEvent :: ReplaceState -> ReplaceEvent a -> EventM Name AppState (a, Maybe ReplaceState)
+runReplaceEvent rState (ReplaceEvent m) = do
+  (a, (s, q)) <- runStateT m (rState, False)
+  pure (a, if q then Nothing else Just s)
 
 -- Not entirely safe: if this modifies the replace state within the AppState,
 -- things can get out of sync in a probably-error-prone way here.
 withApp :: EventM Name AppState a -> ReplaceEvent a
-withApp e = ReplaceEvent . StateT $ \rState -> do
+withApp e = ReplaceEvent . StateT $ \(rState, done) -> do
   a <- e
-  pure (a, rState)
+  pure (a, (rState, done))
+
+quit :: ReplaceEvent ()
+quit = do
+  withApp $ focus .= FromInput
+  ReplaceEvent $ state (\(s,_) -> ((), (s, True)))
 
 pattern PlainKey :: V.Key -> BrickEvent n e
 pattern PlainKey c = VtyEvent (V.EvKey c [])
@@ -56,10 +67,10 @@ setupReplaceMode = do
               , _curReplaceFile=zipper
               , _curFilename=fname
               }
-      (found, rState') <- runReplaceEvent rState seekNextMatch
+      (found, rState') <- runReplaceEvent rState seekCurOrNextMatch
       unless found $ error "No matches when starting replace mode"
-      replaceState .= Just rState'
-      pure (Just rState')
+      replaceState .= rState'
+      pure rState'
 
 getCurReplacement :: TextWithMatch -> ReplaceEvent TextWithMatch
 getCurReplacement twm = withApp $ do
@@ -79,17 +90,16 @@ handleReplaceModeEvent :: BrickEvent Name Event -> ReplaceEvent ()
 handleReplaceModeEvent (PlainKey (V.KChar 'y')) = do
   foundNext <- replaceCurrentMatch
   unless foundNext (void writeAndSeekNextFile)
-
+handleReplaceModeEvent (PlainKey (V.KChar 'Y')) = do
+  repeatWhile replaceCurrentMatch
+  void writeAndSeekNextFile
 handleReplaceModeEvent (PlainKey (V.KChar 'n')) = do
   found <- seekNextMatch
   if found
      then pure ()
      else void writeAndSeekNextFile
-handleReplaceModeEvent (PlainKey (V.KChar 'Y')) = do
-  repeatWhile replaceCurrentMatch
-  void writeAndSeekNextFile
 handleReplaceModeEvent (PlainKey (V.KChar 'N')) = void writeAndSeekNextFile
-handleReplaceModeEvent (PlainKey (V.KChar 'q')) = withApp $ replaceState .= Nothing
+handleReplaceModeEvent (PlainKey (V.KChar 'q')) = quit
 handleReplaceModeEvent _ = pure ()
 
 repeatWhile :: Monad m => m Bool -> m ()
