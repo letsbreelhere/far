@@ -107,11 +107,7 @@ seekNextMatch = do
     Nothing -> pure False
     Just z' -> do
       curReplaceFile .= z'
-      if onMatch z
-        then do
-          curGroupIndex += 1
-          pure True
-        else seekCurOrNextMatch
+      seekCurOrNextMatch
 
 seekCurOrNextMatch :: ReplaceEvent Bool
 seekCurOrNextMatch = do
