@@ -27,12 +27,13 @@ findMatches r s = zipWith (toCaptureGroup s) (Regex.matchAll r s) [0..]
 
 toCaptureGroup :: ByteString -> Regex.MatchArray -> Int -> CaptureGroup
 toCaptureGroup s ma groupIx =
-  let mayMatches = nonEmpty $ mapMaybe toMatch (toList ma `zip` [0..])
+  let mayMatches = nonEmpty $ zipWith toMatch (toList ma) [0..]
    in case mayMatches of
         Just ms -> CaptureGroup { _matches=ms, _groupIndex = groupIx}
         Nothing -> error "Regex match array was unexpectedly empty"
-  where toMatch ((i, _), _) | i < 0 = Nothing
-        toMatch ((i, l), c) = Just $ Match { _matchStartIndex=i, _matchLength=l, _captureIndex=c, _matchContent=slice (i,l) s }
+  where toMatch (i, l) c =
+          let mc = if i < 0 then "" else slice (i,l) s
+           in Match { _matchStartIndex=i, _matchLength=l, _captureIndex=c, _matchContent=mc }
 
 textWithMatches :: Regex -> ByteString -> Seq TextWithMatch
 textWithMatches r s =
