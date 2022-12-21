@@ -105,15 +105,18 @@ repeatWhile mb = do
 seekNextMatch :: ReplaceEvent Bool
 seekNextMatch = do
   z <- use curReplaceFile
-  case cursorNext z of
-    Just z' -> do
-      curReplaceFile .= z'
-      case z' ^. zipCursor . captureGroup of
-        Just _ -> do
-          curGroupIndex += 1
-          pure True
-        Nothing -> seekNextMatch
-    Nothing -> pure False
+  case z ^. zipCursor . captureGroup of
+    Just _ -> pure True
+    Nothing ->
+      case cursorNext z of
+        Just z' -> do
+          curReplaceFile .= z'
+          case z' ^. zipCursor . captureGroup of
+            Just _ -> do
+              curGroupIndex += 1
+              pure True
+            Nothing -> seekNextMatch
+        Nothing -> pure False
 
 writeAndSeekNextFile :: ReplaceEvent Bool
 writeAndSeekNextFile = do
