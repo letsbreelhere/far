@@ -4,11 +4,11 @@ module Events.Replace (handleReplaceModeEvent, setupReplaceMode) where
 import Data.Zipper (zipCursor, mkZipper, cursorNext)
 import Search (replaceOne)
 import Types
-import Util (editorContentL, compiledRegexL, primaryTextWithMatchesL)
+import Util (editorContentL, primaryTextWithMatchesL)
 
 import Brick (BrickEvent(VtyEvent), EventM)
 import Brick.Widgets.List (listSelectedL)
-import Control.Monad (when, void)
+import Control.Monad (unless, void)
 import Data.Maybe (isJust, fromMaybe)
 import Data.TextWithMatch (TextWithMatch(TextWithMatch), captureGroup)
 import Lens.Micro ((^.), _Just)
@@ -22,28 +22,27 @@ pattern PlainKey c = VtyEvent (V.EvKey c [])
 
 setupReplaceMode :: EventM Name AppState ()
 setupReplaceMode = do
-  grepRegex <- use compiledRegexL
-  _ <- matchedFiles.listSelectedL %= \case
+  -- TODO: Handle cases where we shouldn't start up:
+  --  * No valid regex
+  --  * No matched files for regex
+  matchedFiles.listSelectedL %= \case
     Nothing -> Just 0
     Just i -> Just i
-  case grepRegex of
-    Nothing -> pure ()
-    _ -> do
-      use primaryTextWithMatchesL >>= \case
-        Nothing -> error "All files done"
-        Just selectionWithMatches -> do
-          let zipper = fromMaybe (error "Empty textWithMatches during replace mode?") (mkZipper selectionWithMatches)
-              rState =
-                ReplaceState
-                  { _curGroupIndex=negate 1
-                  , _curReplaceFile=zipper
-                  }
-          focus .= Preview
-          replaceState .= Just rState
-          found <- seekNextMatch
-          if found
-             then pure ()
-             else error $ "No matches when starting replace mode: " ++ show zipper
+  use primaryTextWithMatchesL >>= \case
+    Nothing -> error "All files done"
+    Just selectionWithMatches -> do
+      let zipper = fromMaybe (error "Empty textWithMatches during replace mode?") (mkZipper selectionWithMatches)
+          rState =
+            ReplaceState
+              { _curGroupIndex=negate 1
+              , _curReplaceFile=zipper
+              }
+      focus .= Preview
+      replaceState .= Just rState
+      found <- seekNextMatch
+      if found
+         then pure ()
+         else error $ "No matches when starting replace mode: " ++ show zipper
 
 getReplaceState :: EventM Name AppState ReplaceState
 getReplaceState = fromMaybe (error "No replaceState while handling replace mode event") <$> use replaceState
@@ -64,9 +63,7 @@ replaceCurrentMatch rState = do
 handleReplaceModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleReplaceModeEvent (PlainKey (V.KChar 'y')) = do
   foundNext <- replaceCurrentMatch =<< getReplaceState
-  if foundNext
-     then pure ()
-     else void seekNextFile
+  unless foundNext (void seekNextFile)
 
 handleReplaceModeEvent (PlainKey (V.KChar 'n')) = do
   found <- seekNextMatch
