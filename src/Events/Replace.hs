@@ -9,8 +9,6 @@ import Util
 
 import Brick (BrickEvent, EventM, halt)
 import Brick.Widgets.List (listSelectedL)
-import Control.Monad (when, unless, void)
-import Control.Monad.IO.Class (MonadIO(liftIO))
 import Data.Maybe (fromMaybe, isJust)
 import Data.TextWithMatch (TextWithMatch(TextWithMatch), captureGroup)
 import Lens.Micro ((^.), _Just)
@@ -18,14 +16,14 @@ import Lens.Micro.Mtl
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
 import qualified Graphics.Vty as V
-import Control.Monad.State (StateT(..), runStateT, MonadState, state, get, put)
+import Control.Monad.State
 
 newtype ReplaceEvent a = ReplaceEvent (StateT (ReplaceState, Bool) (EventM Name AppState) a)
   deriving (Functor, Applicative, Monad, MonadIO)
 
 instance (MonadState ReplaceState) ReplaceEvent where
-  get = ReplaceEvent $ state (\(s, b) -> (s, (s, b)))
-  put s = ReplaceEvent $ state (\(_, b) -> ((), (s, b)))
+  get = ReplaceEvent $ state (\(s, q) -> (s, (s, q)))
+  put s = ReplaceEvent $ state (\(_, q) -> ((), (s, q)))
 
 runReplaceEvent :: ReplaceState -> ReplaceEvent a -> EventM Name AppState (a, Maybe ReplaceState)
 runReplaceEvent rState (ReplaceEvent m) = do

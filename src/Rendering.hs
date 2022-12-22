@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Rendering (module Rendering) where
 
 import Data.RenderCtx
@@ -6,13 +8,18 @@ import Widgets.Preview
 
 import Brick
 import Data.ByteString (ByteString)
-import Data.Maybe (isJust)
+import Data.Zipper
+import Lens.Micro
+import Data.Maybe (fromMaybe)
+import qualified Data.ByteString.Char8 as BS
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
 import qualified Brick.Widgets.Edit as E
 import qualified Brick.Widgets.List as L
 import qualified Brick.Widgets.ProgressBar as P
 import qualified Data.Text as Text
+import Util (editorContentL)
+import Search (replaceOne)
 
 drawUI :: AppState -> [Widget Name]
 drawUI s = [withRenderCtx uiRoot s]
@@ -29,10 +36,19 @@ uiRoot = do
 
 replaceInstructionsPane :: RenderCtx (Widget Name)
 replaceInstructionsPane = do
-  inReplaceMode <- isJust <$> viewing replaceState
-  if inReplaceMode
-     then pure . withAttr (attrName "instructions") . str $ "Replace with " ++ "[new str]" ++ "? y/n/Y/N/q"
-     else pure emptyWidget
+  viewing replaceState >>= \case
+     Just rState -> do
+       curReplacement <- getCurReplacement rState
+       pure . withAttr (attrName "instructions") . str $ "Replace with " ++ fromMaybe "[NOT FOUND]" curReplacement ++ "? y/n/Y/N/q"
+     Nothing -> pure emptyWidget
+
+getCurReplacement :: ReplaceState -> RenderCtx (Maybe String)
+getCurReplacement rState = do
+  let curTwm = rState ^. curReplaceFile . zipCursor
+  toPattern <- BS.pack . Text.unpack <$> viewing (regexTo . editorContentL)
+  pure $ case replaceOne toPattern curTwm of
+    Right newContent -> Just (BS.unpack newContent)
+    Left _ -> Nothing
 
 progressPane :: RenderCtx (Widget Name)
 progressPane = do
