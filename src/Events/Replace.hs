@@ -44,9 +44,6 @@ quit = do
 
 setupReplaceMode :: EventM Name AppState (Maybe ReplaceState)
 setupReplaceMode = do
-  -- TODO: Handle cases where we shouldn't start up:
-  --  * No valid regex
-  --  * No matched files for regex
   matchedFiles.listSelectedL %= \case
     Nothing -> Just 0
     Just i -> Just i
