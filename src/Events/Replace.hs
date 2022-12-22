@@ -7,7 +7,7 @@ import Search (replaceOne)
 import Types
 import Util
 
-import Brick (BrickEvent, EventM)
+import Brick (BrickEvent, EventM, halt)
 import Brick.Widgets.List (listSelectedL)
 import Control.Monad (when, unless, void)
 import Control.Monad.IO.Class (MonadIO(liftIO))
@@ -33,9 +33,7 @@ runReplaceEvent rState (ReplaceEvent m) = do
   pure (a, if q then Nothing else Just s)
 
 withApp :: EventM Name AppState a -> ReplaceEvent a
-withApp e = ReplaceEvent . StateT $ \(rState, done) -> do
-  a <- e
-  pure (a, (rState, done))
+withApp e = ReplaceEvent . StateT $ \s -> fmap (,s) e
 
 quit :: ReplaceEvent ()
 quit = do
@@ -128,5 +126,5 @@ writeAndSeekNextFile = do
     setupReplaceMode
   case mState of
     Just rState -> put rState
-    Nothing -> error "Done"
+    Nothing -> withApp halt
   pure True

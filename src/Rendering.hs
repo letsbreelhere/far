@@ -40,7 +40,7 @@ progressPane = do
   total <- fromIntegral <$> viewing totalFiles
   pure $ if curFiles < total
     then P.progressBar Nothing (curFiles / total)
-    else str " "
+    else emptyWidget
 
 inputPane :: RenderCtx (Widget Name)
 inputPane = do
