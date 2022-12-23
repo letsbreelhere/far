@@ -9,6 +9,7 @@ import Brick.BChan (newBChan, writeBChan)
 import Control.Concurrent (forkIO)
 import Events
 import Lens.Micro
+import Lens.Micro.Mtl
 import System.Directory
 import System.Environment (getArgs)
 import Util
@@ -21,6 +22,7 @@ import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Graphics.Vty as Vty
 import qualified Data.Sequence as Seq
+import Control.Monad.Cont (MonadIO(liftIO))
 
 chooseCursor :: AppState -> [CursorLocation Name] -> Maybe (CursorLocation Name)
 chooseCursor s = L.find (hasName (s^.focus))
@@ -44,25 +46,32 @@ ui = App
   , appChooseCursor = chooseCursor
   , appAttrMap = const mapForApp
   , appHandleEvent = handleEvent
-  , appStartEvent = pure ()
+  , appStartEvent = startApp
   }
+
+startApp :: EventM Name AppState ()
+startApp = do
+  chan <- use eventChan
+  args <- liftIO getArgs
+  let path = case args of
+               (p:_) -> p
+               _ -> "."
+  fs <- liftIO (fmap Seq.sort . filterMSeq doesFileExist =<< getFilteredContents path)
+  liftIO $ do
+    let process fss = do
+          readChunks <- mapM (\f -> fmap (f,) (BS.readFile f)) fss
+          writeBChan chan . FilesProcessed $ readChunks
+    _ <- forkIO $ do
+      mapM_ process (Seq.chunksOf 1000 fs)
+    pure ()
+  totalFiles .= length fs
 
 buildVty :: IO Vty.Vty
 buildVty = Vty.mkVty Vty.defaultConfig
 
 main :: IO ()
 main = do
-  args <- getArgs
-  let path = case args of
-               (p:_) -> p
-               _ -> "."
-  fs <- fmap Seq.sort . filterMSeq doesFileExist =<< getFilteredContents path
   chan <- newBChan 1000
-  let process fss = do
-        readChunks <- mapM (\f -> fmap (f,) (BS.readFile f)) fss
-        writeBChan chan . FilesProcessed $ readChunks
-  _ <- forkIO $ do
-    mapM_ process (Seq.chunksOf 1000 fs)
   let fList = List.list FileBrowser Vec.empty 1
       editorFrom = Edit.editor FromInput (Just 1) ""
       editorTo = Edit.editor ToInput (Just 1) ""
@@ -73,7 +82,7 @@ main = do
         , _replaceState=Nothing
         , _regexFrom=editorFrom
         , _regexTo=editorTo
-        , _totalFiles=length fs
+        , _totalFiles=0
         , _eventChan=chan
         , _matchThreadId=Nothing
         }
