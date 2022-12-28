@@ -1,32 +1,33 @@
 module Main (main) where
 
-import Types
-import Rendering
 import Gitignore
+import Rendering
+import Types
+import Util
 
 import Brick
 import Brick.BChan (newBChan, writeBChan)
 import Control.Concurrent (forkIO)
 import Control.Monad.Cont (MonadIO(liftIO))
+import Data.Maybe (fromMaybe)
 import Data.Sequence ((><))
 import Events
 import Lens.Micro
 import Lens.Micro.Mtl
 import Options.Applicative
 import System.Directory
-import System.Environment (getArgs)
-import Util
+import System.IO (openFile, IOMode (ReadMode))
+import System.Posix.IO (handleToFd)
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
 import qualified Brick.Widgets.ProgressBar as Progress
 import qualified Data.ByteString as BS
 import qualified Data.Foldable as L
 import qualified Data.Sequence as Seq
+import qualified Data.Text as Text
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Graphics.Vty as Vty
-import Data.Maybe (fromMaybe)
-import qualified Data.Text as Text
 
 data CmdLineOptions = CmdLineOptions
   { initFiles :: [FilePath]
@@ -87,7 +88,9 @@ startApp paths = do
   totalFiles .= length fs
 
 buildVty :: IO Vty.Vty
-buildVty = Vty.mkVty Vty.defaultConfig
+buildVty = do
+  inFd <- handleToFd =<< openFile "/dev/tty" ReadMode
+  Vty.mkVty (Vty.defaultConfig { Vty.inputFd=Just inFd, Vty.outputFd=Nothing })
 
 main :: IO ()
 main = do

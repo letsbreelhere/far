@@ -20,6 +20,7 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/githubuser/far#readme>
 
 dependencies:
+- Glob
 - base >= 4.7 && < 5
 - brick
 - bytestring
@@ -27,16 +28,16 @@ dependencies:
 - directory
 - filepath
 - microlens
-- microlens-th
 - microlens-mtl
+- microlens-th
 - mtl
+- optparse-applicative
 - regex-pcre
 - text
+- text-zipper
+- unix
 - vector
 - vty
-- Glob
-- text-zipper
-- optparse-applicative
 
 ghc-options:
 - -Wall
