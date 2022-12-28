@@ -36,6 +36,7 @@ dependencies:
 - vty
 - Glob
 - text-zipper
+- optparse-applicative
 
 ghc-options:
 - -Wall

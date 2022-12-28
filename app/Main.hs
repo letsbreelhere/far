@@ -7,9 +7,12 @@ import Gitignore
 import Brick
 import Brick.BChan (newBChan, writeBChan)
 import Control.Concurrent (forkIO)
+import Control.Monad.Cont (MonadIO(liftIO))
+import Data.Sequence ((><))
 import Events
 import Lens.Micro
 import Lens.Micro.Mtl
+import Options.Applicative
 import System.Directory
 import System.Environment (getArgs)
 import Util
@@ -18,11 +21,26 @@ import qualified Brick.Widgets.List as List
 import qualified Brick.Widgets.ProgressBar as Progress
 import qualified Data.ByteString as BS
 import qualified Data.Foldable as L
+import qualified Data.Sequence as Seq
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Graphics.Vty as Vty
-import qualified Data.Sequence as Seq
-import Control.Monad.Cont (MonadIO(liftIO))
+import Data.Maybe (fromMaybe)
+import qualified Data.Text as Text
+
+data CmdLineOptions = CmdLineOptions
+  { initFiles :: [FilePath]
+  , initToRegex :: Maybe String
+  , initFromRegex :: Maybe String
+  }
+  deriving (Show)
+
+parseCmdLineOptions :: Parser CmdLineOptions
+parseCmdLineOptions = CmdLineOptions
+  <$> many (strArgument (metavar "FILES"))
+  <*> optional (strOption (long "from" <> short 'f' <> metavar "FROM"))
+  <*> optional (strOption (long "to" <> short 't' <> metavar "TO"))
+
 
 chooseCursor :: AppState -> [CursorLocation Name] -> Maybe (CursorLocation Name)
 chooseCursor s = L.find (hasName (s^.focus))
@@ -40,23 +58,25 @@ mapForApp = attrMap V.defAttr
   , (attrName "instructions", V.currentAttr `V.withStyle` V.reverseVideo)
   ]
 
-ui :: App AppState Event Name
-ui = App
+appMain :: [FilePath] -> App AppState Event Name
+appMain fs = App
   { appDraw = drawUI
   , appChooseCursor = chooseCursor
   , appAttrMap = const mapForApp
   , appHandleEvent = handleEvent
-  , appStartEvent = startApp
+  , appStartEvent = startApp fs
   }
 
-startApp :: EventM Name AppState ()
-startApp = do
+startApp :: [FilePath] -> EventM Name AppState ()
+startApp paths = do
   chan <- use eventChan
-  args <- liftIO getArgs
-  let path = case args of
-               (p:_) -> p
-               _ -> "."
-  fs <- liftIO (fmap Seq.sort . filterMSeq doesFileExist =<< getFilteredContents path)
+  let paths' = case paths of
+                 [] -> ["."]
+                 _ -> paths
+  fs <- liftIO $ do
+    fss <- mapM getFilteredContents paths'
+    let fs = foldr (><) Seq.empty fss
+    fmap Seq.sort . filterMSeq doesFileExist $ fs
   liftIO $ do
     let process fss = do
           readChunks <- mapM (\f -> fmap (f,) (BS.readFile f)) fss
@@ -71,10 +91,12 @@ buildVty = Vty.mkVty Vty.defaultConfig
 
 main :: IO ()
 main = do
+  let opts = info (parseCmdLineOptions <**> helper) mempty
+  CmdLineOptions initFiles initTo initFrom <- execParser opts
   chan <- newBChan 1000
   let fList = List.list FileBrowser Vec.empty 1
-      editorFrom = Edit.editor FromInput (Just 1) ""
-      editorTo = Edit.editor ToInput (Just 1) ""
+      editorFrom = Edit.editor FromInput (Just 1) (Text.pack $ fromMaybe "" initFrom)
+      editorTo = Edit.editor ToInput (Just 1) (Text.pack $ fromMaybe "" initTo)
       initialState = AppState
         { _focus=FromInput
         , _files=mempty
@@ -87,5 +109,5 @@ main = do
         , _matchThreadId=Nothing
         }
   initialVty <- buildVty
-  _ <- customMain initialVty buildVty (Just chan) ui initialState
+  _ <- customMain initialVty buildVty (Just chan) (appMain initFiles) initialState
   pure ()
