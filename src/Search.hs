@@ -10,7 +10,6 @@ import Data.Sequence (Seq(..), (|>))
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import Text.Regex.PCRE (Regex)
-import qualified Data.ByteString.Char8 as ByteString
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence as Seq
 import qualified Text.Regex.PCRE as Regex
@@ -42,12 +41,12 @@ textWithMatches r s =
         else
           let (_, withoutSuffix) = foldl' (pairWithContent s) (0, Seq.empty) cgs
               lastMatchEnds = matchEnds (NE.head . view matches $ last cgs)
-              suffix = slice (lastMatchEnds, ByteString.length s - lastMatchEnds) s
+              suffix = slice (lastMatchEnds, BS.length s - lastMatchEnds) s
               suffixWithMatch = TextWithMatch suffix Nothing
-           in Seq.filter (not . ByteString.null . view content) (withoutSuffix |> suffixWithMatch)
+           in Seq.filter (not . BS.null . view content) (withoutSuffix |> suffixWithMatch)
 
 slice :: (Int, Int) -> ByteString -> ByteString
-slice (i, len) = ByteString.take len . ByteString.drop i
+slice (i, len) = BS.take len . BS.drop i
 
 matchEnds :: Match -> Int
 matchEnds m = (m^.matchStartIndex) + (m^.matchLength)

@@ -1,28 +1,54 @@
-{-# LANGUAGE PatternSynonyms, RankNTypes, FlexibleContexts, LambdaCase #-}
-module Events (handleEvent) where
+{-# LANGUAGE RankNTypes, FlexibleContexts, LambdaCase #-}
+
+module Events (handleEvent, startApp) where
 
 import Events.Replace (handleReplaceModeEvent, setupReplaceMode, runReplaceEvent)
+import Gitignore
 import Search (mkRegex)
 import Types
-import Util ( nextName, prevName, editorContentL, pattern PlainKey )
+import Util
 
 import Brick
-    ( BrickEvent(VtyEvent, AppEvent), EventM, zoom, get, halt )
 import Brick.BChan (writeBChan)
 import Brick.Widgets.List (listElementsL, listSelectedL)
+import Control.Concurrent (forkIO)
 import Control.Monad (when, guard)
-import Control.Monad.IO.Class (MonadIO(liftIO))
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (MonadState)
 import Data.Foldable ( Foldable(toList) )
 import Data.Maybe (isJust)
+import Data.Sequence ((><))
 import Lens.Micro ( SimpleGetter, (^.) )
 import Lens.Micro.Mtl ( (%=), (.=), use )
+import System.Directory (doesFileExist)
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
+import qualified Data.ByteString as BS
+import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Text.Regex.PCRE as Regex
+import GHC.IO (unsafeInterleaveIO)
+
+startApp :: [FilePath] -> EventM Name AppState ()
+startApp paths = do
+  chan <- use eventChan
+  let paths' = case paths of
+                 [] -> ["."]
+                 _ -> paths
+  fs <- liftIO $ do
+    let concatSeq = foldr (><) Seq.empty
+    fss <- mapM getFilteredContents paths'
+    fmap Seq.sort . filterMSeq doesFileExist . concatSeq $ fss
+  liftIO $ do
+    let process fss = do
+          readChunks <- unsafeInterleaveIO $ mapM (\f -> fmap (f,) (BS.readFile f)) fss
+          writeBChan chan . FilesProcessed $ readChunks
+    _ <- forkIO $ do
+      mapM_ process (Seq.chunksOf 1000 fs)
+    pure ()
+  totalFiles .= length fs
 
 sendEvent :: Event -> EventM n AppState ()
 sendEvent e = do

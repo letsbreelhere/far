@@ -5,6 +5,7 @@ module Rendering (module Rendering) where
 import Data.RenderCtx
 import Types
 import Widgets.Preview
+import qualified AttrMap
 
 import Brick
 import Data.ByteString (ByteString)
@@ -39,7 +40,7 @@ replaceInstructionsPane = do
   viewing replaceState >>= \case
      Just rState -> do
        curReplacement <- getCurReplacement rState
-       pure . withAttr (attrName "instructions") . str $ "Replace with " ++ fromMaybe "[NOT FOUND]" curReplacement ++ "? y/n/Y/N/q"
+       pure . withAttr AttrMap.instructions . str $ "Replace with " ++ fromMaybe "[NOT FOUND]" curReplacement ++ "? y/n/Y/N/q"
      Nothing -> pure emptyWidget
 
 getCurReplacement :: ReplaceState -> RenderCtx (Maybe String)
@@ -61,7 +62,7 @@ progressPane = do
 inputPane :: RenderCtx (Widget Name)
 inputPane = do
   fromFocus <- focusIs FromInput
-  let showEditor = withAttr (attrName "input") . vBox . map (str . Text.unpack)
+  let showEditor = withAttr AttrMap.input . vBox . map (str . Text.unpack)
   f <- E.renderEditor showEditor fromFocus <$> viewing regexFrom
 
   toFocus <- focusIs ToInput
@@ -77,6 +78,6 @@ filesPane = do
 renderFile :: Bool -> Bool -> (String, ByteString) -> Widget n
 renderFile hasFocus selected (fname, _) = attr (str fname)
   where attr = withAttr $ case (selected, hasFocus) of
-                 (True, False) -> attrName "selectedFile"
-                 (True, True) -> attrName "focusSelectedFile"
+                 (True, False) -> AttrMap.selectedFile
+                 (True, True) -> AttrMap.focusSelectedFile
                  _ -> mempty

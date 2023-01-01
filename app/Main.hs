@@ -1,105 +1,48 @@
 module Main (main) where
 
-import Gitignore
-import Rendering
-import Types
-import Util
+import CmdLineOptions ( parseCmdLineOptions, CmdLineOptions(CmdLineOptions, initFromRegex, initFiles, initToRegex) )
+import Events ( handleEvent, startApp )
+import Rendering ( drawUI )
+import Types ( AppState(..), Name(FromInput, FileBrowser, ToInput), Event )
+import qualified AttrMap
 
-import Brick
-import Brick.BChan (newBChan, writeBChan)
-import Control.Concurrent (forkIO)
-import Control.Monad.Cont (MonadIO(liftIO))
+import Brick ( customMain, App(..), CursorLocation(cursorLocationName) )
+import Brick.BChan (newBChan)
+import Data.List (find)
 import Data.Maybe (fromMaybe)
-import Data.Sequence ((><))
-import Events
-import Lens.Micro
-import Lens.Micro.Mtl
-import Options.Applicative
-import System.Directory
-import System.IO (openFile, IOMode (ReadMode))
+import Graphics.Vty (Config(..), Vty, mkVty, defaultConfig)
+import System.IO (withFile, IOMode (ReadWriteMode))
 import System.Posix.IO (handleToFd)
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
-import qualified Brick.Widgets.ProgressBar as Progress
-import qualified Data.ByteString as BS
-import qualified Data.Foldable as L
-import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import qualified Data.Vector as Vec
-import qualified Graphics.Vty as V
-import qualified Graphics.Vty as Vty
-
-data CmdLineOptions = CmdLineOptions
-  { initFiles :: [FilePath]
-  , initToRegex :: Maybe String
-  , initFromRegex :: Maybe String
-  }
-  deriving (Show)
-
-parseCmdLineOptions :: Parser CmdLineOptions
-parseCmdLineOptions = CmdLineOptions
-  <$> many (strArgument (metavar "FILES"))
-  <*> optional (strOption (long "from" <> short 'f' <> metavar "FROM"))
-  <*> optional (strOption (long "to" <> short 't' <> metavar "TO"))
-
 
 chooseCursor :: AppState -> [CursorLocation Name] -> Maybe (CursorLocation Name)
-chooseCursor s = L.find (hasName (s^.focus))
+chooseCursor s = find (hasName (_focus s))
   where hasName n cl = cursorLocationName cl == Just n
-
-mapForApp :: AttrMap
-mapForApp = attrMap V.defAttr
-  [ (Progress.progressCompleteAttr, V.currentAttr `V.withStyle` V.reverseVideo)
-  , (attrName "input", V.currentAttr `V.withForeColor` V.blue)
-  , (attrName "error", V.currentAttr `V.withForeColor` V.red)
-  , (attrName "selectedFile", V.currentAttr `V.withStyle` V.reverseVideo)
-  , (attrName "focusSelectedFile", V.currentAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
-  , (attrName "match", V.currentAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
-  , (attrName "selectedMatch", V.currentAttr `V.withForeColor` V.yellow `V.withStyle` V.reverseVideo)
-  , (attrName "instructions", V.currentAttr `V.withStyle` V.reverseVideo)
-  ]
 
 appMain :: [FilePath] -> App AppState Event Name
 appMain fs = App
   { appDraw = drawUI
   , appChooseCursor = chooseCursor
-  , appAttrMap = const mapForApp
+  , appAttrMap = const AttrMap.attrMap
   , appHandleEvent = handleEvent
   , appStartEvent = startApp fs
   }
 
-startApp :: [FilePath] -> EventM Name AppState ()
-startApp paths = do
-  chan <- use eventChan
-  let paths' = case paths of
-                 [] -> ["."]
-                 _ -> paths
-  fs <- liftIO $ do
-    fss <- mapM getFilteredContents paths'
-    let fs = foldr (><) Seq.empty fss
-    fmap Seq.sort . filterMSeq doesFileExist $ fs
-  liftIO $ do
-    let process fss = do
-          readChunks <- mapM (\f -> fmap (f,) (BS.readFile f)) fss
-          writeBChan chan . FilesProcessed $ readChunks
-    _ <- forkIO $ do
-      mapM_ process (Seq.chunksOf 1000 fs)
-    pure ()
-  totalFiles .= length fs
-
-buildVty :: IO Vty.Vty
-buildVty = do
-  inFd <- handleToFd =<< openFile "/dev/tty" ReadMode
-  Vty.mkVty (Vty.defaultConfig { Vty.inputFd=Just inFd, Vty.outputFd=Nothing })
+buildVty :: IO Vty
+buildVty = withFile "/dev/tty" ReadWriteMode $ \h -> do
+  fd <- handleToFd h
+  mkVty (defaultConfig { inputFd = Just fd, outputFd = Just fd })
 
 main :: IO ()
 main = do
-  let opts = info (parseCmdLineOptions <**> helper) mempty
-  CmdLineOptions initFiles initTo initFrom <- execParser opts
+  CmdLineOptions { initFiles, initToRegex, initFromRegex } <- parseCmdLineOptions
   chan <- newBChan 1000
   let fList = List.list FileBrowser Vec.empty 1
-      editorFrom = Edit.editor FromInput (Just 1) (Text.pack $ fromMaybe "" initFrom)
-      editorTo = Edit.editor ToInput (Just 1) (Text.pack $ fromMaybe "" initTo)
+      editorFrom = Edit.editor FromInput (Just 1) (Text.pack $ fromMaybe "" initFromRegex)
+      editorTo = Edit.editor ToInput (Just 1) (Text.pack $ fromMaybe "" initToRegex)
       initialState = AppState
         { _focus=FromInput
         , _files=mempty
