@@ -6,6 +6,7 @@ import Types
 import Util
 
 import Brick
+import Data.Char
 import Data.Foldable (Foldable(toList))
 import Data.Sequence (Seq(..), (<|), (|>))
 import Data.Text.Encoding (decodeUtf8)
@@ -81,5 +82,9 @@ massageForWidget [] = " " -- Avoid displaying empty files/lines with less space
 massageForWidget s = concatMap replaceTabs s
 
 replaceTabs :: Char -> String
+replaceTabs '\n' = "\n"
 replaceTabs '\t' = "    "
-replaceTabs c = [c]
+replaceTabs '\r' = " "
+replaceTabs c
+  | isSpace c = " "
+  | otherwise = [c]
