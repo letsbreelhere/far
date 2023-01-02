@@ -1,5 +1,4 @@
-{-# LANGUAGE LambdaCase, DeriveFunctor, GeneralizedNewtypeDeriving,
-   MultiParamTypeClasses #-}
+{-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
 module Events.Replace (handleReplaceModeEvent, setupReplaceMode, runReplaceEvent) where
 
 import Data.Zipper

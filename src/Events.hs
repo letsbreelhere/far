@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, FlexibleContexts, LambdaCase #-}
+{-# LANGUAGE RankNTypes, FlexibleContexts #-}
 
 module Events (handleEvent, startApp) where
 

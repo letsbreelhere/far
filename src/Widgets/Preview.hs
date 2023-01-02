@@ -8,6 +8,7 @@ import Util
 import Brick
 import Data.Foldable (Foldable(toList))
 import Data.Sequence (Seq(..), (<|), (|>))
+import Data.Text.Encoding (decodeUtf8)
 import Lens.Micro
 import Lens.Micro.Extras (view, preview)
 import qualified Brick.Widgets.Border as B
@@ -15,19 +16,12 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 
-errorLine :: Widget Name
-errorLine = withAttr (attrName "error") $ str "[This file contains invalid characters and will not be displayed.]"
-
 previewPane :: RenderCtx (Widget Name)
 previewPane = do
   (selectedFileName, selectedContents) <- viewing (matchedFiles . selectionL . _Just)
-  mayTwms <- viewing textWithMatchesL
-  selection <- case mayTwms of
+  selection <- viewing textWithMatchesL >>= \case
     Just twms -> previewHighlightedContent twms
-    Nothing ->
-      pure $ case decodeUtf8' selectedContents of
-        Left err -> error ("Unexpectedly got invalid Unicode: " ++ show err)
-        Right t -> str . massageForWidget . Text.unpack $ t
+    Nothing -> pure . str . massageForWidget . Text.unpack . decodeUtf8 $ selectedContents
   pure $
     selection &
       viewport Preview Both &
@@ -49,18 +43,21 @@ previewHighlightedContent twms = do
                           Just gi ->
                             if Just gi == (rState >>= preview curGroupIndex) then attrName "selectedMatch" else attrName "match"
                           _ -> mempty
-      attemptDecode :: TextWithMatch -> Maybe String
-      attemptDecode twm = case decodeUtf8' . view content $ twm of
-                            Left _ -> Nothing
-                            Right c -> Just (Text.unpack c)
-      renderTwm :: TextWithMatch -> Maybe (Widget Name)
-      renderTwm twm = do
-        decoded <- attemptDecode twm
-        pure . withAttr (previewAttr twm) . (if isMatch twm then visibleRegion (Location (0,0)) (10, 10) else id) . str . massageForWidget $ decoded
-      renderLine :: [TextWithMatch] -> Maybe (Widget Name)
-      renderLine [] = Just (str " ")
-      renderLine twms' = hBox <$> mapM renderTwm twms'
-  pure . maybe errorLine vBox $ mapM (renderLine . toList) (toList broken)
+      renderTwm :: TextWithMatch -> Widget Name
+      renderTwm twm =
+        let withVisibility widget = if isMatch twm then visibleRegion (Location (0,0)) (10, 10) widget else widget
+         in twm &
+              view content &
+              decodeUtf8 &
+              Text.unpack &
+              massageForWidget &
+              str &
+              withAttr (previewAttr twm) &
+              withVisibility
+      renderLine :: [TextWithMatch] -> Widget Name
+      renderLine [] = str " "
+      renderLine twms' = hBox (map renderTwm twms')
+  pure . vBox . map (renderLine . toList) . toList $ broken
 
 
 breakLines :: Seq TextWithMatch -> Seq (Seq TextWithMatch)

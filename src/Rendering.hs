@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Rendering (module Rendering) where
 
 import Data.RenderCtx
