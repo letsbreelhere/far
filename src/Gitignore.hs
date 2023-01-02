@@ -13,6 +13,7 @@ import Util
 import qualified Data.List as L
 import qualified Data.Sequence as Seq
 import qualified System.FilePath.Glob as Glob
+import Control.Monad.Except (throwError)
 
 data Pattern a = Pattern
   { _pNegated :: Bool
@@ -23,9 +24,17 @@ makeLenses ''Pattern
 
 getFilteredContents :: FilePath -> IO (Seq FilePath)
 getFilteredContents path = do
-  patterns <- gitIgnorePatterns path
-  patterns' <- evaluate $ map (fmap Glob.compile) patterns
-  getDirFiltered (pure . filterPath patterns') path
+  isDir <- doesDirectoryExist path
+  if isDir
+     then do
+       patterns <- gitIgnorePatterns path
+       patterns' <- evaluate $ map (fmap Glob.compile) patterns
+       getDirFiltered (pure . filterPath patterns') path
+     else do
+       isFile <- doesFileExist path
+       if isFile
+          then pure (Seq.singleton path)
+          else throwError (userError (path ++ " is not a file or directory"))
 
 gitIgnorePatterns :: FilePath -> IO [Pattern String]
 gitIgnorePatterns path = do
