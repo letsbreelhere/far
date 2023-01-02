@@ -39,11 +39,16 @@ buildVty = do
      then mkVty defaultConfig
      else withFile "/dev/tty" ReadWriteMode $ \h -> do
             fd <- handleToFd h
-            mkVty (defaultConfig { inputFd = Just fd, outputFd = Just fd })
+            mkVty (defaultConfig { inputFd = Just fd, outputFd = Nothing })
 
 main :: IO ()
 main = do
+  isTty <- queryTerminal stdInput
   CmdLineOptions { initFiles, initToRegex, initFromRegex } <- parseCmdLineOptions
+  extraStdinFiles <- do
+    if isTty
+      then pure []
+      else fmap lines getContents
   chan <- newBChan 1000
   let fList = List.list FileBrowser Vec.empty 1
       editorFrom = Edit.editor FromInput (Just 1) (Text.pack $ fromMaybe "" initFromRegex)
@@ -60,5 +65,5 @@ main = do
         , _matchThreadId=Nothing
         }
   initialVty <- buildVty
-  _ <- customMain initialVty buildVty (Just chan) (appMain initFiles) initialState
+  _ <- customMain initialVty buildVty (Just chan) (appMain (initFiles ++ extraStdinFiles)) initialState
   pure ()
