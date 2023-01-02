@@ -53,10 +53,10 @@ getCurReplacement rState = do
 
 progressPane :: RenderCtx (Widget Name)
 progressPane = do
-  curFiles <- fromIntegral . length <$> viewing files
+  cur <- fromIntegral <$> viewing processedFiles
   total <- fromIntegral <$> viewing totalFiles
-  pure $ if curFiles < total
-    then P.progressBar Nothing (curFiles / total)
+  pure $ if cur < total
+    then P.progressBar Nothing (cur / total)
     else emptyWidget
 
 inputPane :: RenderCtx (Widget Name)

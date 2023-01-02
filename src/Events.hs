@@ -9,17 +9,17 @@ import Types
 import Util
 
 import Brick
-import Brick.BChan (writeBChan)
+import Brick.BChan (writeBChan, BChan)
 import Brick.Widgets.List (listElementsL, listSelectedL)
 import Control.Concurrent (forkIO)
 import Control.Monad (when, guard)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (MonadState)
 import Data.Foldable ( Foldable(toList) )
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, catMaybes)
 import Data.Sequence ((><))
 import Lens.Micro ( SimpleGetter, (^.) )
-import Lens.Micro.Mtl ( (%=), (.=), use )
+import Lens.Micro.Mtl
 import System.Directory (doesFileExist)
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
@@ -30,6 +30,7 @@ import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Text.Regex.PCRE as Regex
 import GHC.IO (unsafeInterleaveIO)
+import Data.Text.Encoding (decodeUtf8')
 
 startApp :: [FilePath] -> EventM Name AppState ()
 startApp paths = do
@@ -42,13 +43,20 @@ startApp paths = do
     fss <- mapM getFilteredContents paths'
     fmap Seq.sort . filterMSeq doesFileExist . concatSeq $ fss
   liftIO $ do
-    let process fss = do
-          readChunks <- unsafeInterleaveIO $ mapM (\f -> fmap (f,) (BS.readFile f)) fss
-          writeBChan chan . FilesProcessed $ readChunks
     _ <- forkIO $ do
-      mapM_ process (Seq.chunksOf 1000 fs)
+      mapM_ (processFileGroup chan) (Seq.chunksOf 1000 fs)
     pure ()
   totalFiles .= length fs
+
+processFileGroup :: Foldable t => BChan Event -> t FilePath -> IO ()
+processFileGroup chan fss = do
+  let processSingleFile f = do
+        contentsBs <- BS.readFile f
+        pure $ case decodeUtf8' contentsBs of
+          Left _ -> Nothing
+          Right _ -> Just (f, contentsBs)
+  readChunks <- fmap (Seq.fromList . catMaybes) . unsafeInterleaveIO . mapM processSingleFile . toList $ fss
+  writeBChan chan $ FilesProcessed (length fss) readChunks
 
 sendEvent :: Event -> EventM n AppState ()
 sendEvent e = do
@@ -89,8 +97,9 @@ handleSetupModeEvent (PlainKey V.KBackTab) = focus %= prevName
 handleSetupModeEvent (PlainKey V.KEnter) = do
   rState <- setupReplaceMode
   replaceState .= rState
-handleSetupModeEvent (AppEvent (FilesProcessed fs)) = do
+handleSetupModeEvent (AppEvent (FilesProcessed processedCount fs)) = do
   files %= flip mappend (Vec.fromList (toList fs))
+  processedFiles += processedCount
   updateMatchedFiles
 handleSetupModeEvent (AppEvent (MatchedFilesProcessed fs)) = do
   matchedFiles.listElementsL.= fs

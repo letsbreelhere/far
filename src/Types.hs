@@ -28,7 +28,7 @@ data File = File
   }
 makeLenses ''File
 
-data Event = FilesProcessed (Seq (String, ByteString))
+data Event = FilesProcessed Int (Seq (String, ByteString))
            | MatchedFilesProcessed (Vector (String, ByteString))
            | UpdateThreadId ThreadId
 
@@ -48,6 +48,7 @@ data AppState = AppState
   , _regexFrom :: Editor Text Name
   , _regexTo :: Editor Text Name
   , _totalFiles :: Int
+  , _processedFiles :: Int
   , _eventChan :: BChan Event
   , _matchThreadId :: Maybe ThreadId
   }

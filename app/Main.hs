@@ -61,6 +61,7 @@ main = do
         , _regexFrom=editorFrom
         , _regexTo=editorTo
         , _totalFiles=0
+        , _processedFiles=0
         , _eventChan=chan
         , _matchThreadId=Nothing
         }

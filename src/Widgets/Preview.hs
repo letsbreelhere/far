@@ -8,7 +8,6 @@ import Util
 import Brick
 import Data.Foldable (Foldable(toList))
 import Data.Sequence (Seq(..), (<|), (|>))
-import Data.Text.Encoding (decodeUtf8')
 import Lens.Micro
 import Lens.Micro.Extras (view, preview)
 import qualified Brick.Widgets.Border as B
@@ -27,7 +26,7 @@ previewPane = do
     Just twms -> previewHighlightedContent twms
     Nothing ->
       pure $ case decodeUtf8' selectedContents of
-        Left _ -> errorLine
+        Left err -> error ("Unexpectedly got invalid Unicode: " ++ show err)
         Right t -> str . massageForWidget . Text.unpack $ t
   pure $
     selection &
