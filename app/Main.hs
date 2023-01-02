@@ -12,11 +12,12 @@ import Data.List (find)
 import Data.Maybe (fromMaybe)
 import Graphics.Vty (Config(..), Vty, mkVty, defaultConfig)
 import System.IO (withFile, IOMode (ReadWriteMode))
-import System.Posix.IO (handleToFd)
+import System.Posix.IO (handleToFd, stdInput)
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
 import qualified Data.Text as Text
 import qualified Data.Vector as Vec
+import System.Posix (queryTerminal)
 
 chooseCursor :: AppState -> [CursorLocation Name] -> Maybe (CursorLocation Name)
 chooseCursor s = find (hasName (_focus s))
@@ -32,9 +33,13 @@ appMain fs = App
   }
 
 buildVty :: IO Vty
-buildVty = withFile "/dev/tty" ReadWriteMode $ \h -> do
-  fd <- handleToFd h
-  mkVty (defaultConfig { inputFd = Just fd, outputFd = Just fd })
+buildVty = do
+  isTty <- queryTerminal stdInput
+  if isTty
+     then mkVty defaultConfig
+     else withFile "/dev/tty" ReadWriteMode $ \h -> do
+            fd <- handleToFd h
+            mkVty (defaultConfig { inputFd = Just fd, outputFd = Just fd })
 
 main :: IO ()
 main = do
