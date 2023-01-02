@@ -59,8 +59,8 @@ previewHighlightedContent twms = do
         decoded <- attemptDecode twm
         pure . withAttr (previewAttr twm) . (if isMatch twm then visibleRegion (Location (0,0)) (10, 10) else id) . str . massageForWidget $ decoded
       renderLine :: [TextWithMatch] -> Maybe (Widget Name)
-      renderLine [] = Just $ str " "
-      renderLine twms' = fmap hBox . mapM renderTwm $ twms'
+      renderLine [] = Just (str " ")
+      renderLine twms' = hBox <$> mapM renderTwm twms'
   pure . maybe errorLine vBox $ mapM (renderLine . toList) (toList broken)
 
 
