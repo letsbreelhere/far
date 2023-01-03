@@ -7,6 +7,7 @@ import qualified AttrMap
 
 import Brick
 import Data.ByteString (ByteString)
+import Data.List (intersperse)
 import Data.Text (Text)
 import Data.Zipper
 import Lens.Micro
@@ -20,19 +21,17 @@ import qualified Brick.Widgets.ProgressBar as P
 import qualified Data.Text as Text
 import Util (editorContentL)
 import Search (replaceOne)
+import Control.Monad (zipWithM)
 
 drawUI :: AppState -> [Widget Name]
 drawUI s = [withRenderCtx uiRoot s]
 
 uiRoot :: RenderCtx (Widget Name)
 uiRoot = do
-  inputPane' <- inputPane
-  filesPane' <- filesPane
-  previewPane' <- previewPane
-  progressPane' <- progressPane
-  replaceInstructions <- replaceInstructionsPane
+  leftPane <- vBox <$> sequence [progressPane, filesPane, checkboxPane, inputPane]
+  rightPane <- vBox <$> sequence [previewPane, replaceInstructionsPane]
   pure $ padAll 5 $ C.center $ B.border $
-    (progressPane' <=> filesPane' <=> inputPane') <+> (previewPane' <=> replaceInstructions)
+    leftPane <+> rightPane
 
 replaceInstructionsPane :: RenderCtx (Widget Name)
 replaceInstructionsPane = do
@@ -64,6 +63,19 @@ editorWithPlaceholder p ts =
    then withAttr AttrMap.placeholder (str p)
    else withAttr AttrMap.input . vBox . map (str . Text.unpack) $ ts
 
+checkboxPane :: RenderCtx (Widget Name)
+checkboxPane = do
+  opts <- viewing regexOptions
+  widgets <- zipWithM checkboxFor [0..] opts
+  pure . (str "Options: " <+>) . hBox . intersperse (str ",") $ widgets
+
+checkboxFor :: Int -> RegexOption -> RenderCtx (Widget n)
+checkboxFor i opt = do
+  isSelected <- focusIs (OptionIndex i)
+  let whenMonoid b m = if b then m else mempty
+      attr = whenMonoid (opt^.isSet) AttrMap.checked <> whenMonoid isSelected AttrMap.selected
+  pure $ withAttr attr (str [opt^.symbol])
+
 inputPane :: RenderCtx (Widget Name)
 inputPane = do
   fromInput <- E.renderEditor (editorWithPlaceholder "from") <$> focusIs FromInput <*> viewing regexFrom
@@ -72,7 +84,7 @@ inputPane = do
 
 filesPane :: RenderCtx (Widget Name)
 filesPane = do
-  hasFocus <- (FileBrowser ==) <$> viewing focus
+  hasFocus <- focusIs FileBrowser
   fs <- viewing matchedFiles
   pure $ L.renderList (renderFile hasFocus) hasFocus fs
 

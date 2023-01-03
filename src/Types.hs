@@ -17,9 +17,14 @@ import Data.Vector (Vector)
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import Lens.Micro.TH (makeLenses)
+import Text.Regex.PCRE (CompOption, compCaseless, compExtended)
 
-data Name = Preview | FileBrowser | FromInput | ToInput
-  deriving (Show, Ord, Eq, Enum, Bounded)
+data Name = Preview
+          | FileBrowser
+          | FromInput
+          | ToInput
+          | OptionIndex Int
+  deriving (Show, Ord, Eq)
 
 data File = File
   { _fileName :: String
@@ -30,7 +35,7 @@ makeLenses ''File
 
 data Event = FilesProcessed Int (Seq (String, ByteString))
            | MatchedFilesProcessed (Vector (String, ByteString))
-           | UpdateThreadId ThreadId
+           deriving (Eq)
 
 data ReplaceState = ReplaceState
   { _curGroupIndex :: Int
@@ -39,6 +44,19 @@ data ReplaceState = ReplaceState
   }
   deriving (Show)
 makeLenses ''ReplaceState
+
+data RegexOption = RegexOption
+  { _symbol :: Char
+  , _compOption :: CompOption
+  , _isSet :: Bool
+  }
+makeLenses ''RegexOption
+
+defaultRegexOptions :: [RegexOption]
+defaultRegexOptions =
+  [ RegexOption 'i' compCaseless False
+  , RegexOption 'e' compExtended False
+  ]
 
 data AppState = AppState
   { _focus :: Name
@@ -51,6 +69,7 @@ data AppState = AppState
   , _processedFiles :: Int
   , _eventChan :: BChan Event
   , _matchThreadId :: Maybe ThreadId
+  , _regexOptions :: [RegexOption]
   }
 makeLenses ''AppState
 

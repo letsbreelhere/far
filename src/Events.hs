@@ -4,7 +4,6 @@ module Events (handleEvent, startApp) where
 
 import Events.Replace (handleReplaceModeEvent, setupReplaceMode, runReplaceEvent)
 import Gitignore
-import Search (mkRegex)
 import Types
 import Util
 
@@ -12,20 +11,19 @@ import Brick
 import Brick.BChan (writeBChan, BChan)
 import Brick.Widgets.List (listElementsL, listSelectedL)
 import Control.Concurrent (forkIO)
-import Control.Monad (when, guard)
+import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (MonadState)
 import Data.Foldable ( Foldable(toList) )
 import Data.Maybe (isJust, catMaybes)
 import Data.Sequence ((><))
-import Lens.Micro ( SimpleGetter, (^.) )
+import Lens.Micro
 import Lens.Micro.Mtl
 import System.Directory (doesFileExist)
 import qualified Brick.Widgets.Edit as Edit
 import qualified Brick.Widgets.List as List
 import qualified Data.ByteString as BS
 import qualified Data.Sequence as Seq
-import qualified Data.Text as Text
 import qualified Data.Vector as Vec
 import qualified Graphics.Vty as V
 import qualified Text.Regex.PCRE as Regex
@@ -66,11 +64,8 @@ sendEvent e = do
 updateMatchedFiles :: EventM Name AppState ()
 updateMatchedFiles = do
   allFiles <- use files
-  grepRegex <- use (regexFrom . editorContentL)
-  let mRegex = do
-        guard (not . Text.null $ grepRegex)
-        mkRegex (Text.unpack grepRegex)
-      matchedFiles' = case mRegex of
+  grepRegex <- use compiledRegexL
+  let matchedFiles' = case grepRegex of
         Just r -> Vec.filter (\(_, c) -> isJust $ Regex.matchOnce r c) allFiles
         Nothing -> allFiles
   sendEvent (MatchedFilesProcessed matchedFiles')
@@ -89,6 +84,12 @@ handleEvent e = do
     Just rState -> do
       (_, rState') <- runReplaceEvent rState $ handleReplaceModeEvent e
       replaceState .= rState'
+
+handleOptionEvent :: Int -> BrickEvent Name Event -> EventM Name AppState ()
+handleOptionEvent i (PlainKey (V.KChar ' ')) = do
+  regexOptions . ix i . isSet %= not
+  updateMatchedFiles
+handleOptionEvent _ _ = pure ()
 
 handleSetupModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
 handleSetupModeEvent (PlainKey V.KEsc) = halt
@@ -113,4 +114,5 @@ handleSetupModeEvent e = do
         _ -> pure ()
     FromInput -> monitorChange (regexFrom . editorContentL) (\_ _ -> updateMatchedFiles) (zoom regexFrom . Edit.handleEditorEvent) e
     ToInput -> zoom regexTo $ Edit.handleEditorEvent e
+    OptionIndex i -> handleOptionEvent i e
     _ -> pure ()

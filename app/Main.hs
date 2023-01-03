@@ -3,7 +3,7 @@ module Main (main) where
 import CmdLineOptions ( parseCmdLineOptions, CmdLineOptions(CmdLineOptions, initFromRegex, initFiles, initToRegex) )
 import Events ( handleEvent, startApp )
 import Rendering ( drawUI )
-import Types ( AppState(..), Name(FromInput, FileBrowser, ToInput), Event )
+import Types ( AppState(..), Name(FromInput, FileBrowser, ToInput), Event, defaultRegexOptions )
 import qualified AttrMap
 
 import Brick ( customMain, App(..), CursorLocation(cursorLocationName) )
@@ -64,6 +64,7 @@ main = do
         , _processedFiles=0
         , _eventChan=chan
         , _matchThreadId=Nothing
+        , _regexOptions=defaultRegexOptions
         }
   initialVty <- buildVty
   _ <- customMain initialVty buildVty (Just chan) (appMain (initFiles ++ extraStdinFiles)) initialState

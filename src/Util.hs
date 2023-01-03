@@ -30,14 +30,22 @@ pattern PlainKey c = VtyEvent (V.EvKey c [])
 filterMSeq :: (a -> IO Bool) -> Seq a -> IO (Seq a)
 filterMSeq p = foldM (\acc a -> p a >>= \b -> if b then pure (acc |> a) else pure acc) Seq.empty
 
+maxOptionIndex :: Int
+maxOptionIndex = 1
+
 nextName :: Name -> Name
-nextName FileBrowser = FromInput
+nextName FileBrowser = OptionIndex 0
+nextName (OptionIndex i)
+  | i < maxOptionIndex = OptionIndex (i+1)
+  | otherwise = FromInput
 nextName FromInput = ToInput
 nextName ToInput = FileBrowser
 nextName Preview = error "No nextName for Preview"
 
 prevName :: Name -> Name
-prevName FromInput = FileBrowser
+prevName FromInput = OptionIndex maxOptionIndex
+prevName (OptionIndex 0) = FileBrowser
+prevName (OptionIndex i) = OptionIndex (i-1)
 prevName FileBrowser = ToInput
 prevName ToInput = FromInput
 prevName Preview = error "No prevName for Preview"
@@ -51,10 +59,12 @@ editorContentL :: SimpleGetter (Edit.Editor Text n) Text
 editorContentL = Edit.editContentsL . to getText . to Text.concat
 
 compiledRegexL :: SimpleGetter AppState (Maybe Regex)
-compiledRegexL = regexFrom .
-  editorContentL .
-  to Text.unpack .
-  to (\t -> guard (not $ null t) >> mkRegex t)
+compiledRegexL = to $ \s ->
+   s ^.
+     regexFrom .
+     editorContentL .
+     to Text.unpack .
+     to (\t -> guard (not $ null t) >> mkRegex (s^.regexOptions) t)
 
 primaryTextWithMatchesL :: SimpleGetter AppState (Maybe (String, Seq TextWithMatch))
 primaryTextWithMatchesL = to $ \s -> do

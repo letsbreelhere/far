@@ -16,9 +16,13 @@ import qualified Text.Regex.PCRE as Regex
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Foldable as L
 import Text.Read (readMaybe)
+import Types (RegexOption, compOption, isSet)
+import Data.Bits (Ior(..))
 
-mkRegex :: String -> Maybe Regex
-mkRegex = Regex.makeRegexM
+mkRegex :: [RegexOption] -> String -> Maybe Regex
+mkRegex opts s =
+  let compOpts = getIor . foldMap (\o -> Ior (if o^.isSet then o^.compOption else 0)) $ opts
+   in Regex.makeRegexOptsM compOpts 0 s
 
 findMatches :: Regex -> ByteString -> [CaptureGroup]
 findMatches r s = zipWith (toCaptureGroup s) (Regex.matchAll r s) [0..]
