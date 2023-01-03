@@ -7,6 +7,7 @@ import qualified AttrMap
 
 import Brick
 import Data.ByteString (ByteString)
+import Data.Text (Text)
 import Data.Zipper
 import Lens.Micro
 import Data.Maybe (fromMaybe)
@@ -57,15 +58,17 @@ progressPane = do
     then P.progressBar Nothing (cur / total)
     else emptyWidget
 
+editorWithPlaceholder :: String -> [Text] -> Widget n
+editorWithPlaceholder p ts =
+  if all Text.null ts
+   then withAttr AttrMap.placeholder (str p)
+   else withAttr AttrMap.input . vBox . map (str . Text.unpack) $ ts
+
 inputPane :: RenderCtx (Widget Name)
 inputPane = do
-  fromFocus <- focusIs FromInput
-  let showEditor = withAttr AttrMap.input . vBox . map (str . Text.unpack)
-  f <- E.renderEditor showEditor fromFocus <$> viewing regexFrom
-
-  toFocus <- focusIs ToInput
-  t <- E.renderEditor showEditor toFocus <$> viewing regexTo
-  pure $ f <+> str "/ " <+> t
+  fromInput <- E.renderEditor (editorWithPlaceholder "from") <$> focusIs FromInput <*> viewing regexFrom
+  toInput <- E.renderEditor (editorWithPlaceholder "to") <$> focusIs ToInput <*> viewing regexTo
+  pure $ fromInput <+> str "/ " <+> toInput
 
 filesPane :: RenderCtx (Widget Name)
 filesPane = do

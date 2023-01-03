@@ -15,6 +15,7 @@ attrMap = Brick.attrMap V.defAttr
   , (match, V.currentAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
   , (selectedMatch, V.currentAttr `V.withForeColor` V.yellow `V.withStyle` V.reverseVideo)
   , (instructions, V.currentAttr `V.withStyle` V.reverseVideo)
+  , (placeholder, V.currentAttr `V.withForeColor` V.rgbColor 150 150 150)
   ]
 
 input :: Brick.AttrName
@@ -37,3 +38,6 @@ selectedMatch = Brick.attrName "selectedMatch"
 
 instructions :: Brick.AttrName
 instructions = Brick.attrName "instructions"
+
+placeholder :: Brick.AttrName
+placeholder = Brick.attrName "placeholder"
