@@ -3,7 +3,7 @@
 `far` is a TUI tool for project-wide find and replace. It's `.gitignore`-aware
 and uses PCRE-style regexes.
 
-![image](https://user-images.githubusercontent.com/823979/210441826-d26c25bd-030c-402c-9528-89fb477d3584.png)
+![image](https://user-images.githubusercontent.com/823979/210457145-ba4bbedd-993f-44cc-b7a2-f8e538cf67ff.png)
 
 ## Usage
 
@@ -15,7 +15,11 @@ from a previous `ls` or `rg` command you can just pipe:
 rg -l foobar | far
 ```
 
-## Navigation
+## Commands
 
-Use `<Tab>` and `<Shift-Tab>` to navigate between the file list and from/to
-regexes. Hit `<Enter>` to start replacing.
+| Key | Action |
+| --- | ------ |
+| `Tab` | Next input |
+| `Shift-Tab` | Previous input |
+| `Space` | Toggle option |
+| `Enter` | Start replacing |
