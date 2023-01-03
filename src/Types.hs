@@ -17,7 +17,7 @@ import Data.Vector (Vector)
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import Lens.Micro.TH (makeLenses)
-import Text.Regex.PCRE (CompOption, compCaseless, compExtended)
+import Text.Regex.PCRE (CompOption)
 
 data Name = Preview
           | FileBrowser
@@ -51,12 +51,6 @@ data RegexOption = RegexOption
   , _isSet :: Bool
   }
 makeLenses ''RegexOption
-
-defaultRegexOptions :: [RegexOption]
-defaultRegexOptions =
-  [ RegexOption 'i' compCaseless False
-  , RegexOption 'e' compExtended False
-  ]
 
 data AppState = AppState
   { _focus :: Name

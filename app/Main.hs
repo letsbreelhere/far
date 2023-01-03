@@ -1,9 +1,9 @@
 module Main (main) where
 
-import CmdLineOptions ( parseCmdLineOptions, CmdLineOptions(CmdLineOptions, initFromRegex, initFiles, initToRegex) )
+import CmdLineOptions ( parseCmdLineOptions, CmdLineOptions(..) )
 import Events ( handleEvent, startApp )
 import Rendering ( drawUI )
-import Types ( AppState(..), Name(FromInput, FileBrowser, ToInput), Event, defaultRegexOptions )
+import Types ( AppState(..), Name(FromInput, FileBrowser, ToInput), Event )
 import qualified AttrMap
 
 import Brick ( customMain, App(..), CursorLocation(cursorLocationName) )
@@ -44,7 +44,7 @@ buildVty = do
 main :: IO ()
 main = do
   isTty <- queryTerminal stdInput
-  CmdLineOptions { initFiles, initToRegex, initFromRegex } <- parseCmdLineOptions
+  CmdLineOptions { initFiles, initToRegex, initFromRegex, initRegexOptions } <- parseCmdLineOptions
   extraStdinFiles <- do
     if isTty
       then pure []
@@ -64,7 +64,7 @@ main = do
         , _processedFiles=0
         , _eventChan=chan
         , _matchThreadId=Nothing
-        , _regexOptions=defaultRegexOptions
+        , _regexOptions=initRegexOptions
         , _curError=Nothing
         }
   initialVty <- buildVty
