@@ -10,7 +10,7 @@ attrMap :: Brick.AttrMap
 attrMap = Brick.attrMap V.defAttr
   [ (Progress.progressCompleteAttr, V.defAttr `V.withStyle` V.reverseVideo)
   , (input, V.defAttr `V.withForeColor` V.blue)
-  , (error, V.defAttr `V.withForeColor` V.red)
+  , (error, V.defAttr `V.withForeColor` V.red `V.withStyle` V.reverseVideo)
   , (selectedFile, V.defAttr `V.withStyle` V.reverseVideo)
   , (focusSelectedFile, V.defAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)
   , (match, V.defAttr `V.withForeColor` V.blue `V.withStyle` V.reverseVideo)

@@ -96,6 +96,7 @@ handleSetupModeEvent (PlainKey V.KEsc) = halt
 handleSetupModeEvent (PlainKey (V.KChar '\t')) = focus %= nextName
 handleSetupModeEvent (PlainKey V.KBackTab) = focus %= prevName
 handleSetupModeEvent (PlainKey V.KEnter) = do
+  curError .= Nothing
   rState <- setupReplaceMode
   replaceState .= rState
 handleSetupModeEvent (AppEvent (FilesProcessed processedCount fs)) = do
@@ -112,7 +113,7 @@ handleSetupModeEvent e = do
       case e of
         VtyEvent vtyEvent -> zoom matchedFiles $ List.handleListEventVi List.handleListEvent vtyEvent
         _ -> pure ()
-    FromInput -> monitorChange (regexFrom . editorContentL) (\_ _ -> updateMatchedFiles) (zoom regexFrom . Edit.handleEditorEvent) e
-    ToInput -> zoom regexTo $ Edit.handleEditorEvent e
+    FromInput -> monitorChange (regexFrom . editorContentL) (\_ _ -> curError .= Nothing >> updateMatchedFiles) (zoom regexFrom . Edit.handleEditorEvent) e
+    ToInput -> monitorChange (regexTo . editorContentL) (\_ _ -> curError .= Nothing) (zoom regexTo . Edit.handleEditorEvent) e
     OptionIndex i -> handleOptionEvent i e
     _ -> pure ()

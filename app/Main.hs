@@ -65,6 +65,7 @@ main = do
         , _eventChan=chan
         , _matchThreadId=Nothing
         , _regexOptions=defaultRegexOptions
+        , _curError=Nothing
         }
   initialVty <- buildVty
   _ <- customMain initialVty buildVty (Just chan) (appMain (initFiles ++ extraStdinFiles)) initialState

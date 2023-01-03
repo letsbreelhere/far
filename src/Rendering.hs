@@ -28,7 +28,7 @@ drawUI s = [withRenderCtx uiRoot s]
 
 uiRoot :: RenderCtx (Widget Name)
 uiRoot = do
-  leftPane <- vBox <$> sequence [progressPane, filesPane, checkboxPane, inputPane]
+  leftPane <- vBox <$> sequence [progressPane, filesPane, optionsPane, inputPane]
   rightPane <- vBox <$> sequence [previewPane, replaceInstructionsPane]
   pure $ padAll 5 $ C.center $ B.border $
     leftPane <+> rightPane
@@ -63,11 +63,17 @@ editorWithPlaceholder p ts =
    then withAttr AttrMap.placeholder (str p)
    else withAttr AttrMap.input . vBox . map (str . Text.unpack) $ ts
 
+optionsPane :: RenderCtx (Widget Name)
+optionsPane = hBox <$> sequence [checkboxPane, errorPane]
+
 checkboxPane :: RenderCtx (Widget Name)
 checkboxPane = do
   opts <- viewing regexOptions
   widgets <- zipWithM checkboxFor [0..] opts
   pure . (str "Options: " <+>) . hBox . intersperse (str ",") $ widgets
+
+errorPane :: RenderCtx (Widget Name)
+errorPane = padLeft Max . maybe emptyWidget (withAttr AttrMap.error . str) <$> viewing curError
 
 checkboxFor :: Int -> RegexOption -> RenderCtx (Widget n)
 checkboxFor i opt = do

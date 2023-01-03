@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor, GeneralizedNewtypeDeriving, MultiParamTypeClasses #-}
-module Events.Replace (handleReplaceModeEvent, setupReplaceMode, runReplaceEvent) where
+module Events.Replace (handleReplaceModeEvent, setupReplaceMode, runReplaceEvent, quit) where
 
 import Data.Zipper
 import Search (replaceOne)
@@ -55,19 +55,31 @@ setupReplaceMode = do
               }
       (found, rState') <- runReplaceEvent rState seekCurOrNextMatch
       unless found $ error "No matches when starting replace mode"
-      pure rState'
+      case rState' of
+        Just rs -> do
+          (curReplacement, _) <- runReplaceEvent rs getCurReplacementE
+          either (handleReplaceError rs) (const $ pure rState') curReplacement
+        Nothing -> pure Nothing
 
-getCurReplacement :: TextWithMatch -> ReplaceEvent TextWithMatch
-getCurReplacement twm = withApp $ do
-  toPattern <- BS.pack . Text.unpack <$> use (regexTo . editorContentL)
-  case replaceOne toPattern twm of
-    Right newContent -> pure $ TextWithMatch newContent Nothing
-    Left err -> error err
+handleReplaceError :: ReplaceState -> String -> EventM Name AppState (Maybe ReplaceState)
+handleReplaceError rs err = do
+  curError .= Just err
+  (_, rs') <- runReplaceEvent rs quit
+  pure rs'
+
+getCurReplacementE :: ReplaceEvent (Either String TextWithMatch)
+getCurReplacementE = do
+  twm <- use (curReplaceFile . zipCursor)
+  withApp $ do
+    toPattern <- BS.pack . Text.unpack <$> use (regexTo . editorContentL)
+    pure . fmap (`TextWithMatch` Nothing) $ replaceOne toPattern twm
+
+getCurReplacement :: ReplaceEvent TextWithMatch
+getCurReplacement = either error id <$> getCurReplacementE
 
 replaceCurrentMatch :: ReplaceEvent Bool
 replaceCurrentMatch = do
-  rState <- get
-  replacementString <- getCurReplacement (rState ^. curReplaceFile . zipCursor)
+  replacementString <- getCurReplacement
   curReplaceFile . zipCursor .= replacementString
   seekNextMatch
 

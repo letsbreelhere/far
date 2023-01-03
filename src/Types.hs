@@ -70,6 +70,7 @@ data AppState = AppState
   , _eventChan :: BChan Event
   , _matchThreadId :: Maybe ThreadId
   , _regexOptions :: [RegexOption]
+  , _curError :: Maybe String
   }
 makeLenses ''AppState
 
