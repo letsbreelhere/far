@@ -16,7 +16,7 @@ jobs:
 
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1.1.1
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -105,8 +105,8 @@ jobs:
           echo "::set-output name=upload_url::$(cat release_url/release_url.txt)"
 
       - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1.0.1
+        id: upload_release_asset
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -114,3 +114,6 @@ jobs:
           asset_path: ${{ env.BINARY_PATH }}
           asset_name: far-${{ steps.tag.outputs.tag }}-${{ runner.os }}-ghc-${{ matrix.ghc }}${{ env.EXT }}
           asset_content_type: application/octet-stream
+      - name: Done
+        run: |
+          echo "Uploaded to ${{steps.upload_release_asset.outputs.browser_download_url}}"
