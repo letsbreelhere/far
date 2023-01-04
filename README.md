@@ -19,6 +19,17 @@ from a previous `ls` or `rg` command you can just pipe:
 rg -l foobar | far
 ```
 
+## Options
+
+`far [FILES] [-f|--from FROM] [-t|--to TO] [-i|--case-insensitive] [-e|--extended]`
+
+| Short | Long | Description | Default |
+| ----- | ---- | ----------- | ------- |
+| `-i` | `--case-insensitive` | Case-insensitive search | false |
+| `-e` | `--extended` | Use [extended](https://www.pcre.org/original/doc/html/pcrepattern.html#atomicgroup) PCRE regexes | false |
+| `-f` | `--from` | Initial from-regex | Empty |
+| `-t` | `--to` | Initial to-regex (use `\1`, `\2`, etc for capture groups | Empty |
+
 ## Commands
 
 | Key | Action |
