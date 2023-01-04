@@ -50,7 +50,6 @@ jobs:
         with:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
-          enable-stack: true
 
       - name: Check out code
         uses: actions/checkout@v2
@@ -82,7 +81,7 @@ jobs:
         run: |
           brew install pcre
           mkdir dist
-          cabal install exe:far --install-method=copy --overwrite-policy=always --installdir=dist
+          cabal install exe:far --ghc-options='-optl-static -optl-pthread' --install-method=copy --overwrite-policy=always --installdir=dist
 
       - name: Set binary path name
         run: echo "::set-env name=BINARY_PATH::./dist/far${{ env.EXT }}"
