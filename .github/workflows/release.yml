@@ -78,6 +78,11 @@ jobs:
             ${{ runner.os }}-build-
             ${{ runner.os }}-
 
+      - name: MacOS build setup
+        if: matrix.os == 'macOS-latest'
+        run: |
+          brew install pcre
+
       - name: Build binary
         run: |
           mkdir dist
