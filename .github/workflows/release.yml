@@ -4,7 +4,7 @@ on:
   # Trigger the workflow on the new 'v*' tag created
   push:
     tags:
-      - "v*"
+      - "master"
 
 jobs:
   create_release:
@@ -42,18 +42,17 @@ jobs:
         os: [ubuntu-latest, macOS-latest]
         ghc:
           - "9.2.5"
-        cabal: ["3.2"]
+        cabal: ["3.6.3.0"]
 
     steps:
       - name: Check out code
         uses: actions/checkout@v2
 
       - name: Set tag name
-        uses: olegtarasov/get-tag@v2
+        uses: olegtarasov/get-tag@v2.1.2
         id: tag
         with:
           tagRegex: "v(.*)"
-          tagRegexGroup: 1
 
       - name: Setup Haskell
         uses: actions/setup-haskell@v1.1.1
@@ -61,24 +60,31 @@ jobs:
         with:
           ghc-version: ${{ matrix.ghc }}
           cabal-version: ${{ matrix.cabal }}
+          enable-stack: true
 
       - name: Freeze
         run: |
           cabal freeze
 
-      - name: Cache ~/.cabal/store
-        uses: actions/cache@v1
+      - name: Cache
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-stack
         with:
-          path: ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
-          key: ${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal.project.freeze') }}
+          path: ~/.stack-work
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('stack.yml') }}-${{ hashFiles('package.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
 
       - name: Build binary
         run: |
           mkdir dist
-          cabal install exe:stan --install-method=copy --overwrite-policy=always --installdir=dist
+          cabal install exe:far --install-method=copy --overwrite-policy=always --installdir=dist
 
       - name: Set binary path name
-        run: echo "::set-env name=BINARY_PATH::./dist/stan${{ env.EXT }}"
+        run: echo "::set-env name=BINARY_PATH::./dist/far${{ env.EXT }}"
 
       - name: Compress binary
         uses: svenstaro/upx-action@2.0.1
@@ -103,5 +109,5 @@ jobs:
         with:
           upload_url: ${{ steps.get_release_info.outputs.upload_url }}
           asset_path: ${{ env.BINARY_PATH }}
-          asset_name: stan-${{ steps.tag.outputs.tag }}-${{ runner.os }}-ghc-${{ matrix.ghc }}${{ env.EXT }}
+          asset_name: far-${{ steps.tag.outputs.tag }}-${{ runner.os }}-ghc-${{ matrix.ghc }}${{ env.EXT }}
           asset_content_type: application/octet-stream

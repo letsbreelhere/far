@@ -38,5 +38,5 @@ replaceAllTests = testGroup "replaceAll"
     testCase "it does no replacement on non-matches" $ do
       let twms = textWithMatches vowelRegex "ffoobarbazquux"
           replaceResults = replaceAll "p\\1" twms
-      replaceResults @?= Just "fpooparpazpuux"
+      replaceResults @?= Right "fpooparpazpuux"
   ]
