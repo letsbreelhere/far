@@ -28,7 +28,7 @@ rg -l foobar | far
 | `-i` | `--case-insensitive` | Case-insensitive search | false |
 | `-e` | `--extended` | Use [extended](https://www.pcre.org/original/doc/html/pcrepattern.html#atomicgroup) PCRE regexes | false |
 | `-f` | `--from` | Initial from-regex | Empty |
-| `-t` | `--to` | Initial to-regex (use `\1`, `\2`, etc for capture groups | Empty |
+| `-t` | `--to` | Initial to-regex (use `\1`, `\2`, etc. for capture groups) | Empty |
 
 ## Commands
 
