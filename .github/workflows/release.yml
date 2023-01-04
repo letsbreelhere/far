@@ -39,7 +39,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest]
+        os: [macOS-latest]
         ghc:
           - "9.2.5"
         cabal: ["3.6.3.0"]
@@ -80,6 +80,7 @@ jobs:
 
       - name: Build binary
         run: |
+          brew install pcre
           mkdir dist
           cabal install exe:far --install-method=copy --overwrite-policy=always --installdir=dist
 
