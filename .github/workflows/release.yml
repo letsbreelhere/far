@@ -4,7 +4,7 @@ on:
   # Trigger the workflow on the new 'v*' tag created
   push:
     tags:
-      - "master"
+      - "v*"
 
 jobs:
   create_release:
@@ -45,6 +45,13 @@ jobs:
         cabal: ["3.6.3.0"]
 
     steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-haskell@v1
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: ${{ matrix.cabal }}
+          enable-stack: true
+
       - name: Check out code
         uses: actions/checkout@v2
 
@@ -53,14 +60,6 @@ jobs:
         id: tag
         with:
           tagRegex: "v(.*)"
-
-      - name: Setup Haskell
-        uses: actions/setup-haskell@v1.1.1
-        id: setup-haskell-cabal
-        with:
-          ghc-version: ${{ matrix.ghc }}
-          cabal-version: ${{ matrix.cabal }}
-          enable-stack: true
 
       - name: Freeze
         run: |
