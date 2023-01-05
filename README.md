@@ -5,6 +5,10 @@ and uses PCRE-style regexes.
 
 ![image](https://user-images.githubusercontent.com/823979/210457145-ba4bbedd-993f-44cc-b7a2-f8e538cf67ff.png)
 
+## Why?
+
+I use vim as my editor, but it has awful support for this sort of thing. Some plugins get close, but in my experience they still require a ton of keystrokes to set up what should be a fast and easily-checkable process.
+
 ## Installation
 
 With [stack](https://docs.haskellstack.org/en/stable/) installed, just do `stack install` in this directory.
