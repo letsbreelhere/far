@@ -7,8 +7,8 @@ import Text.Regex.PCRE (CompOption, compCaseless, compExtended)
 
 data CmdLineOptions = CmdLineOptions
   { initFiles :: [FilePath]
-  , initToRegex :: Maybe String
   , initFromRegex :: Maybe String
+  , initToRegex :: Maybe String
   , initRegexOptions :: [RegexOption]
   }
 
