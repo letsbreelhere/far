@@ -44,13 +44,15 @@ gitIgnorePatterns path = do
     else pure []
   where parseLine line = map (\p -> p & globPattern %~ (path </>)) $ lineToPattern line
 
+-- Returns True if the path should be filtered out. Note that negated patterns
+-- simply return False. This is a TODO. In reality we should be searching to
+-- see if any matching negated files exist and add them after the fact.
 filterPath :: Foldable t => t (Pattern Glob.Pattern) -> FilePath -> Bool
-filterPath ps fname = not . any (matchPattern fname) $ ps
-
-matchPattern :: FilePath -> Pattern Glob.Pattern -> Bool
-matchPattern fname (Pattern negated glob) =
-  let match = Glob.match glob fname
-   in if negated then not match else match
+filterPath ps f = not . any matchPattern $ ps
+  where matchPattern :: Pattern Glob.Pattern -> Bool
+        matchPattern (Pattern negated glob) =
+          let match = Glob.match glob f
+           in if negated then False else match
 
 getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO (Seq FilePath)
 getDirFiltered predicate path = do
