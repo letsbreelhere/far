@@ -50,9 +50,7 @@ gitIgnorePatterns path = do
 filterPath :: Foldable t => t (Pattern Glob.Pattern) -> FilePath -> Bool
 filterPath ps f = not . any matchPattern $ ps
   where matchPattern :: Pattern Glob.Pattern -> Bool
-        matchPattern (Pattern negated glob) =
-          let match = Glob.match glob f
-           in if negated then False else match
+        matchPattern (Pattern negated glob) = not negated && Glob.match glob f
 
 getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO (Seq FilePath)
 getDirFiltered predicate path = do
