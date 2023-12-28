@@ -92,6 +92,8 @@ handleOptionEvent i (PlainKey (V.KChar ' ')) = do
 handleOptionEvent _ _ = pure ()
 
 handleSetupModeEvent :: BrickEvent Name Event -> EventM Name AppState ()
+handleSetupModeEvent (PlainKey V.KDown) = zoom matchedFiles $ List.handleListEvent (V.EvKey V.KDown [])
+handleSetupModeEvent (PlainKey V.KUp) = zoom matchedFiles $ List.handleListEvent (V.EvKey V.KUp [])
 handleSetupModeEvent (PlainKey V.KEsc) = halt
 handleSetupModeEvent (PlainKey (V.KChar '\t')) = focus %= nextName
 handleSetupModeEvent (PlainKey V.KBackTab) = focus %= prevName

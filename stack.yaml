@@ -8,7 +8,7 @@
 # A snapshot resolver dictates the compiler version and the set of packages
 # to be used for project dependencies. For example:
 #
-resolver: lts-20.4
+resolver: lts-21.17
 #resolver: nightly-2022-11-22
 #resolver: ghc-9.2.4
 #

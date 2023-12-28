@@ -29,7 +29,7 @@ getFilteredContents path = do
      then do
        patterns <- gitIgnorePatterns path
        patterns' <- evaluate $ map (fmap Glob.compile) patterns
-       getDirFiltered (pure . filterPath patterns') path
+       getDirFiltered (pure . isPathIgnored patterns') path
      else do
        isFile <- doesFileExist path
        if isFile
@@ -45,12 +45,11 @@ gitIgnorePatterns path = do
   where parseLine line = map (\p -> p & globPattern %~ (path </>)) $ lineToPattern line
 
 -- Returns True if the path should be filtered out. Note that negated patterns
--- simply return False. This is a TODO. In reality we should be searching to
--- see if any matching negated files exist and add them after the fact.
-filterPath :: Foldable t => t (Pattern Glob.Pattern) -> FilePath -> Bool
-filterPath ps f = not . any matchPattern $ ps
-  where matchPattern :: Pattern Glob.Pattern -> Bool
-        matchPattern (Pattern negated glob) = not negated && Glob.match glob f
+-- are simply passed over. This is a TODO. In reality we should be searching to
+-- see if any matching negated files exist and adding them after filtering out.
+isPathIgnored :: Foldable t => t (Pattern Glob.Pattern) -> FilePath -> Bool
+isPathIgnored ps f = not . any matchIgnorePattern $ ps
+  where matchIgnorePattern (Pattern negated glob) = not negated && Glob.match glob f
 
 getDirFiltered :: (FilePath -> IO Bool) -> FilePath -> IO (Seq FilePath)
 getDirFiltered predicate path = do
